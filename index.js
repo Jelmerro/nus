@@ -2,26 +2,9 @@
 "use strict"
 
 const {join} = require("path")
-const {writeFileSync, readFileSync, rmSync} = require("fs")
+const {writeFileSync, readFileSync, rmSync, existsSync} = require("fs")
 const {execSync} = require("child_process")
 const {maxSatisfying} = require("semver")
-
-const overrides = {}
-const config = {
-    "audit": true,
-    "dedup": true,
-    "indent": 4,
-    "npm": {
-        "force": false,
-        "global": false,
-        "legacy": false,
-        "silent": false,
-        "verbose": false
-    },
-    "prefixChar": ""
-}
-const packageJson = join(process.cwd(), "package.json")
-let pack = {}
 
 /**
  * Find the version of a package by direct version matching or semver range.
@@ -38,6 +21,22 @@ const findByRange = (name, range) => {
     return maxSatisfying(versions, range)
 }
 
+const config = {
+    "audit": true,
+    "dedup": true,
+    "indent": 4,
+    "npm": {
+        "force": false,
+        "global": false,
+        "legacy": false,
+        "silent": false,
+        "verbose": false
+    },
+    "overrides": {},
+    "prefixChar": ""
+}
+const packageJson = join(process.cwd(), "package.json")
+let pack = {}
 try {
     const packStr = readFileSync(packageJson, {"encoding": "utf8"}).toString()
     const line = packStr.split("\n").find(
@@ -48,8 +47,80 @@ try {
     }
     pack = JSON.parse(packStr)
 } catch {
-    console.warn("X No package.json found in the current directory, all done.")
+    console.warn("X No package.json found in the current directory")
     process.exit(1)
+}
+if (existsSync("./nus.config.js")) {
+    try {
+        const customConfig = require("./nus.config.js")
+        const npmArgs = ["force", "global", "legacy", "silent", "verbose"]
+        for (const npmArg of npmArgs) {
+            if (typeof customConfig?.npm?.[npmArg] === "boolean") {
+                config.npm[npmArg] = customConfig.npm[npmArg]
+            } else if (customConfig?.npm?.[npmArg] !== undefined) {
+                console.warn(`X Ignoring config for 'npm.${
+                    npmArg}', must be boolean`)
+            }
+        }
+        for (const arg of ["audit", "dedup"]) {
+            if (typeof customConfig?.[arg] === "boolean") {
+                config[arg] = customConfig[arg]
+            } else if (customConfig[arg] !== undefined) {
+                console.warn(`X Ignoring config for 'npm.${
+                    arg}', must be boolean`)
+            }
+        }
+        if (customConfig.indent === "\t") {
+            config.indent = customConfig.indent
+        } else if (typeof customConfig.indent === "number") {
+            config.indent = customConfig.indent
+        } else if (customConfig.indent !== undefined) {
+            console.warn("X Ignoring config for 'indent', "
+                + "must be number or '\\t'")
+        }
+        const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]
+        if (validPrefixes.includes(customConfig.prefixChar)) {
+            config.prefixChar = customConfig.prefixChar
+        } else if (customConfig.prefixChar !== undefined) {
+            console.warn(`X Ignoring config for 'prefixChar', must be one of: ${
+                validPrefixes.join(" ")}`)
+        }
+        if (typeof customConfig.overrides === "object") {
+            for (const [key, value] of Object.entries(customConfig.overrides)) {
+                if (typeof value !== "string") {
+                    console.warn(`X Ignoring override '${key}',`
+                        + " value must be string")
+                    continue
+                }
+                config.overrides[key] = value
+            }
+        } else if (customConfig.overrides !== undefined) {
+            console.warn("X Ignoring config for 'overrides', "
+                + "must be a flat string-string object")
+        }
+    } catch {
+        console.warn("X Ignoring 'nus.config.js' config, invalid JS")
+    }
+}
+if (existsSync("./nus.overrides.json")) {
+    try {
+        const overrides = JSON.parse(readFileSync("./nus.overrides.json"))
+        if (typeof overrides === "object" && !Array.isArray(overrides)) {
+            for (const [key, value] of Object.entries(overrides)) {
+                if (typeof value !== "string") {
+                    console.warn(`X Ignoring override '${key}',`
+                        + " value must be string")
+                    continue
+                }
+                config.overrides[key] = value
+            }
+        } else if (overrides !== undefined) {
+            console.warn("X Ignoring config from 'nus.overrides.json', "
+                + "must be a flat string-string object")
+        }
+    } catch {
+        console.warn("X Ignoring 'nus.overrides.json' config, invalid JSON")
+    }
 }
 let longestName = 20
 for (const name of Object.keys(pack.dependencies ?? {})) {
@@ -72,7 +143,7 @@ for (const depType of ["dependencies", "devDependencies"]) {
         const info = JSON.parse(execSync(
             `npm show ${name} --json`, {"encoding": "utf8"}))
         let latest = info?.["dist-tags"]?.latest
-        const desired = overrides[name] ?? "latest"
+        const desired = config.overrides[name] ?? "latest"
         if (desired === "latest" && config.prefixChar) {
             latest = config.prefixChar + latest
         }
