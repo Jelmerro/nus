@@ -24,21 +24,6 @@ const packageJson = join(process.cwd(), "package.json")
 let pack = {}
 
 /**
- * Find the version of a package by tag name.
- * @param {string} name - The name of the package.
- * @param {string} tag - The version tag to search for.
- */
-const findByTag = (name, tag) => {
-    const info = execSync(`npm dist-tags ${name}`, {"encoding": "utf8"})
-    const regex = new RegExp(`${tag}:\\s+(.+)(\\s+|$)`)
-    const match = regex.exec(info)?.[1] ?? ""
-    if (match) {
-        return config.prefixChar + match
-    }
-    return null
-}
-
-/**
  * Find the version of a package by direct version matching or semver range.
  * @param {string} name - The name of the package.
  * @param {string} range - The version range to search for.
@@ -63,7 +48,7 @@ try {
     }
     pack = JSON.parse(packStr)
 } catch {
-    console.warn("E No package.json found in the current directory, all done.")
+    console.warn("X No package.json found in the current directory, all done.")
     process.exit(1)
 }
 let longestName = 20
@@ -81,26 +66,31 @@ for (const depType of ["dependencies", "devDependencies"]) {
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
         if (version.startsWith("git+") || version.startsWith("github:")) {
-            console.info(`U ${paddedName}git`)
+            console.info(`- ${paddedName}git`)
             continue
         }
-        const latest = findByTag(name, "latest")
+        const info = JSON.parse(execSync(
+            `npm show ${name} --json`, {"encoding": "utf8"}))
+        let latest = info?.["dist-tags"]?.latest
         const desired = overrides[name] ?? "latest"
+        if (desired === "latest" && config.prefixChar) {
+            latest = config.prefixChar + latest
+        }
         let wanted = latest
         if (desired !== "latest") {
-            wanted = findByTag(name, overrides[name])
-                ?? findByRange(name, overrides[name])
+            wanted = info?.["dist-tags"]?.[desired]
+                ?? findByRange(name, desired)
         }
         if (!wanted || !latest) {
-            console.info(`E ${paddedName}${version} (${desired})`)
-            console.error(`E Failed, no ${desired} version for ${
+            console.info(`X ${paddedName}${version} (${desired})`)
+            console.warn(`X Failed, no ${desired} version for ${
                 name}, sticking to ${version}`)
             continue
         }
         if (wanted === version) {
             console.info(`  ${paddedName}${version} (${desired})`)
         } else {
-            console.info(`U ${paddedName}${
+            console.info(`> ${paddedName}${
                 version} => ${wanted} (${desired})`)
         }
         if (wanted !== latest) {
