@@ -50,9 +50,10 @@ try {
     console.warn("X No package.json found in the current directory")
     process.exit(1)
 }
-if (existsSync("./nus.config.js")) {
+const nusConfigFile = join(process.cwd(), "nus.config.js")
+if (existsSync(nusConfigFile)) {
     try {
-        const customConfig = require("./nus.config.js")
+        const customConfig = require(nusConfigFile)
         const npmArgs = ["force", "global", "legacy", "silent", "verbose"]
         for (const npmArg of npmArgs) {
             if (typeof customConfig?.npm?.[npmArg] === "boolean") {
@@ -102,9 +103,10 @@ if (existsSync("./nus.config.js")) {
         console.warn("X Ignoring 'nus.config.js' config, invalid JS")
     }
 }
-if (existsSync("./nus.overrides.json")) {
+const nusOverridesFile = join(process.cwd(), "nus.overrides.json")
+if (existsSync(nusOverridesFile)) {
     try {
-        const overrides = JSON.parse(readFileSync("./nus.overrides.json"))
+        const overrides = JSON.parse(readFileSync(nusOverridesFile))
         if (typeof overrides === "object" && !Array.isArray(overrides)) {
             for (const [key, value] of Object.entries(overrides)) {
                 if (typeof value !== "string") {
