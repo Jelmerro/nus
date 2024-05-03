@@ -1,0 +1,27 @@
+{
+    "name": "nus",
+    "productName": "Node Update Script",
+    "version": "0.1.0",
+    "description": "A script to update all node packages in a project",
+    "main": "index.js",
+    "bin": {
+        "nus": "./index.js"
+    },
+    "repository": "https://github.com/Jelmerro/nus",
+    "keywords": [
+        "Vim",
+        "Electron",
+        "Browser",
+        "Internet"
+    ],
+    "author": "Jelmer van Arnhem",
+    "email": "Jelmerro@users.noreply.github.com",
+    "funding": "https://github.com/sponsors/Jelmerro/",
+    "license": "MIT",
+    "dependencies": {
+        "semver": "7.6.0"
+    },
+    "devDependencies": {
+        "eslint-config": "github:Jelmerro/eslint-config"
+    }
+}
