@@ -195,5 +195,5 @@ if (config.audit) {
     execSync(`npm audit fix${args}`, {"encoding": "utf8", "stdio": "inherit"})
 }
 if (config.dedup) {
-    execSync(`npm audit fix${args}`, {"encoding": "utf8", "stdio": "inherit"})
+    execSync(`npm dedup${args}`, {"encoding": "utf8", "stdio": "inherit"})
 }
