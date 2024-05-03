@@ -1,8 +1,8 @@
 {
     "name": "nus",
-    "productName": "Node Update Script",
+    "productName": "Node/npm Update Script",
     "version": "0.1.0",
-    "description": "A script to update all node packages in a project",
+    "description": "A script to update all node/npm packages in a project",
     "main": "index.js",
     "bin": {
         "nus": "./index.js"

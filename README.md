@@ -1,7 +1,7 @@
 nus
 ===
 
-Node Update Script - A script to update all node packages in a project.
+Node/npm Update Script - A script to update all node/npm packages in a project.
 
 ## Features
 
