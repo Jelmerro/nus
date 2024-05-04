@@ -9,10 +9,9 @@
     },
     "repository": "https://github.com/Jelmerro/nus",
     "keywords": [
-        "Vim",
-        "Electron",
-        "Browser",
-        "Internet"
+        "Nodejs",
+        "Npm",
+        "Updater"
     ],
     "author": "Jelmer van Arnhem",
     "email": "Jelmerro@users.noreply.github.com",
