@@ -83,7 +83,7 @@ For example, to use the latest beta tag of package `package-a`,
 as well as the newest v5.x.x major release of `package-b` (but not 6.0.0 or newer),
 you should use and overrides section like so:
 
-```js
+```json
 {
     "package-a": "beta",
     "package-b": "^5"
