@@ -71,8 +71,8 @@ if (existsSync(nusConfigFile)) {
                     arg}', must be boolean`)
             }
         }
-        if (customConfig.indent === "\t") {
-            config.indent = customConfig.indent
+        if (customConfig.indent === "\t" || customConfig.indent === "\\t") {
+            config.indent = "\t"
         } else if (typeof customConfig.indent === "number") {
             config.indent = customConfig.indent
         } else if (customConfig.indent !== undefined) {
