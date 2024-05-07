@@ -135,7 +135,7 @@ for (const depType of ["dependencies", "devDependencies"]) {
     console.info(`= Updating ${depType} =`)
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
-        if (version.startsWith("git+") || version.startsWith("github:")) {
+        if (version.includes("/") && !version.startsWith("@")) {
             console.info(`- ${paddedName}git`)
             continue
         }
