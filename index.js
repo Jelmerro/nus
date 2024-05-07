@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-"use strict"
 
-const {join} = require("path")
-const {writeFileSync, readFileSync, rmSync, existsSync} = require("fs")
-const {execSync} = require("child_process")
-const {maxSatisfying} = require("semver")
+import {existsSync, readFileSync, rmSync, writeFileSync} from "fs"
+import {execSync} from "child_process"
+import {join} from "path"
+import maxSatisfying from "semver/ranges/max-satisfying.js"
 
 /**
  * Find the version of a package by direct version matching or semver range.
@@ -49,8 +48,14 @@ try {
 }
 const nusConfigFile = join(process.cwd(), "nus.config.js")
 if (existsSync(nusConfigFile)) {
+    let customConfig = null
     try {
-        const customConfig = require(nusConfigFile)
+        customConfig = await import(nusConfigFile)
+        customConfig = customConfig.default ?? customConfig
+    } catch {
+        console.warn("X Ignoring 'nus.config.js' config, invalid JS")
+    }
+    if (customConfig) {
         const npmArgs = ["force", "global", "legacy", "silent", "verbose"]
         for (const npmArg of npmArgs) {
             if (typeof customConfig?.npm?.[npmArg] === "boolean") {
@@ -96,8 +101,6 @@ if (existsSync(nusConfigFile)) {
             console.warn("X Ignoring config for 'overrides', "
                 + "must be a flat string-string object")
         }
-    } catch {
-        console.warn("X Ignoring 'nus.config.js' config, invalid JS")
     }
 }
 const nusOverridesFile = join(process.cwd(), "nus.overrides.json")

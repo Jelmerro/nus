@@ -43,8 +43,9 @@ This file can hold all nus config and even overrides for versions to use.
 A basic config (using all default settings) can look like this:
 
 `nus.config.js`
+
 ```js
-module.exports = {
+export default {
     "audit": true,
     "dedup": true,
     "indent": 4,
@@ -73,6 +74,7 @@ such as "~" for only patch upgrades and "^" for any non-major ones.
 This character is added only to the package.json, mostly as a suggestion,
 as you should rarely if ever run a plain `npm i` instead of `npm ci`,
 hence why by default it is left empty to specify the exact version.
+CommonJS's `module.exports` syntax will also work if you have not set `"type": "module"` yet.
 
 ### Overrides
 
