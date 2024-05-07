@@ -8,13 +8,10 @@ const {maxSatisfying} = require("semver")
 
 /**
  * Find the version of a package by direct version matching or semver range.
- * @param {string} name - The name of the package.
+ * @param {string[]} versions - The list of versions available.
  * @param {string} range - The version range to search for.
  */
-const findByRange = (name, range) => {
-    const info = execSync(`npm show ${
-        name} versions --json`, {"encoding": "utf8"})
-    const versions = JSON.parse(info)
+const findByRange = (versions, range) => {
     if (versions.includes(range)) {
         return range
     }
@@ -143,16 +140,22 @@ for (const depType of ["dependencies", "devDependencies"]) {
             continue
         }
         const info = JSON.parse(execSync(
-            `npm show ${name} --json`, {"encoding": "utf8"}))
-        let latest = info?.["dist-tags"]?.latest
+            `npm view ${name} --json`, {"encoding": "utf8"}))
         const desired = config.overrides[name] ?? "latest"
+        if (!info?.["dist-tags"] || !info?.versions) {
+            console.info(`X ${paddedName}${version} (${desired})`)
+            console.warn(`X Failed, npm request for ${
+                name} gave invalid info, sticking to ${version}`)
+            continue
+        }
+        let {latest} = info["dist-tags"]
         if (desired === "latest" && config.prefixChar) {
             latest = config.prefixChar + latest
         }
         let wanted = latest
         if (desired !== "latest") {
-            wanted = info?.["dist-tags"]?.[desired]
-                ?? findByRange(name, desired)
+            wanted = info["dist-tags"][desired]
+                ?? findByRange(info.versions, desired)
         }
         if (!wanted || !latest) {
             console.info(`X ${paddedName}${version} (${desired})`)
