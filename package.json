@@ -19,7 +19,7 @@
     "funding": "https://github.com/sponsors/Jelmerro/",
     "license": "MIT",
     "dependencies": {
-        "semver": "7.6.0"
+        "semver": "7.6.2"
     },
     "devDependencies": {
         "eslint-config": "github:Jelmerro/eslint-config"
