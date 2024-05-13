@@ -52,6 +52,7 @@ export default {
     "npm": {
         "force": false,
         "global": false,
+        "ignoreScripts": false,
         "legacy": false,
         "silent": false,
         "verbose": false

@@ -24,6 +24,7 @@ const config = {
     "npm": {
         "force": false,
         "global": false,
+        "ignoreScripts": false,
         "legacy": false,
         "silent": false,
         "verbose": false
@@ -56,7 +57,7 @@ if (existsSync(nusConfigFile)) {
         console.warn("X Ignoring 'nus.config.js' config, invalid JS")
     }
     if (customConfig) {
-        const npmArgs = ["force", "global", "legacy", "silent", "verbose"]
+        const npmArgs = Object.keys(config.npm)
         for (const npmArg of npmArgs) {
             if (typeof customConfig?.npm?.[npmArg] === "boolean") {
                 config.npm[npmArg] = customConfig.npm[npmArg]
@@ -188,6 +189,9 @@ if (config.npm.force) {
 }
 if (config.npm.global) {
     args += " --global"
+}
+if (config.npm.ignoreScripts) {
+    args += " --ignore-scripts"
 }
 if (config.npm.legacy) {
     args += " --legacy-peer-deps"
