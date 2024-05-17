@@ -84,7 +84,7 @@ This object is used to change specific packages from using a different version t
 This can be done by listing an exact version, a dist-tag or a semver range.
 For example, to use the latest beta tag of package `package-a`,
 as well as the newest v5.x.x major release of `package-b` (but not 6.0.0 or newer),
-you should use and overrides section like so:
+you should use an overrides section like so:
 
 ```json
 {
@@ -99,6 +99,15 @@ you can also use `nus.overrides.json` in the root of your project.
 This file does not support any other config, but just the overrides object like above.
 You are free to have both a config and an overrides file,
 but if you have the same package name in both files the overrides file has priority.
+
+#### Git overrides
+
+In case of git(hub) packages, you can supply a commit-ish argument,
+which means any tag, sha hash, or branch which can be supplied as an argument to `git checkout`.
+For example, `#1.0.0`, `#c1f134d` or `#master` are all valid, the `#` is optional in the nus config,
+but you might want to list it with the `#` to be explicit about git package overrides.
+Unlike npm semver ranges and versions, these are not checked for validity before installing,
+so unlike invalid semver ranges, supplying an invalid git override will prevent `npm install` from working.
 
 ## License
 
