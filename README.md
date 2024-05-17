@@ -68,7 +68,7 @@ If unset, the package.json's current indent level (or tabs) are checked and re-u
 so in practice you should rarely need to set this explicitly.
 The same is true for and boolean options that are already set to the value you need.
 The npm subkey is used for giving the respective options to npm commands,
-the one that is always run is `npm ci`, but by default `audit` and `dedup` are also run.
+the one that is always run is `npm install`, but by default `audit` and `dedup` are also run.
 They all use the same npm arguments, by default none, to install/audit/dedup the packages.
 You can also change the prefixChar option to add a char in front of versions,
 such as "~" for only patch upgrades and "^" for any non-major ones.
