@@ -5,18 +5,6 @@ import {execSync} from "child_process"
 import {join} from "path"
 import maxSatisfying from "semver/ranges/max-satisfying.js"
 
-/**
- * Find the version of a package by direct version matching or semver range.
- * @param {string[]} versions - The list of versions available.
- * @param {string} range - The version range to search for.
- */
-const findByRange = (versions, range) => {
-    if (versions.includes(range)) {
-        return range
-    }
-    return maxSatisfying(versions, range)
-}
-
 const config = {
     "audit": true,
     "dedup": true,
@@ -32,6 +20,102 @@ const config = {
     "overrides": {},
     "prefixChar": ""
 }
+
+/**
+ * Find the version of a package by direct version matching or semver range.
+ * @param {string[]} versions - The list of versions available.
+ * @param {string} range - The version range to search for.
+ */
+const findByRange = (versions, range) => {
+    if (versions.includes(range)) {
+        return range
+    }
+    return maxSatisfying(versions, range)
+}
+
+/**
+ * Find the type of version selector, such as semver, alias or git package.
+ * @param {string} name
+ * @param {string} version
+ */
+const findVersionType = (name, version) => {
+    /** @type {"semver"|"alias"|"git"|"url"|"file"} */
+    let verType = "semver"
+    let alias = null
+    if (version.startsWith("npm:")) {
+        alias = version.replace(/^npm:/, "")
+            .split("@").slice(0, -1).join("@")
+        verType = "alias"
+    }
+    const hasSlashes = name.includes("/") || version.includes("/")
+    if (hasSlashes && !name.startsWith("@")) {
+        verType = "git"
+        if (version.startsWith("http:") || version.startsWith("https:")) {
+            verType = "url"
+        } else if (version.startsWith("file:")) {
+            verType = "file"
+        }
+    }
+    return {alias, verType}
+}
+
+/**
+ * Find the wanted version for a given package based on desired version string.
+ * @param {{
+ *   alias: string,
+ *   desired: string,
+ *   name: string,
+ *   paddedName: string,
+ *   verType: string,
+ *   version: string,
+ * }} opts
+ */
+const findWantedVersion = ({
+    alias, desired, name, paddedName, verType, version
+}) => {
+    let info = null
+    try {
+        info = JSON.parse(execSync(
+            `npm view ${alias ?? name} --json`, {"encoding": "utf8"}))
+    } catch {
+        // Can't update package without this info, next if will be entered.
+    }
+    if (!info?.["dist-tags"] || !info?.versions) {
+        console.info(`X ${paddedName}${version} (${desired})`)
+        console.warn(`X Failed, npm request for ${
+            name} gave invalid info, sticking to ${version}`)
+        return null
+    }
+    let {latest} = info["dist-tags"]
+    if (desired === "latest" && config.prefixChar) {
+        latest = config.prefixChar + latest
+    }
+    let wanted = latest
+    if (desired !== "latest") {
+        wanted = info["dist-tags"][desired]
+            ?? findByRange(info.versions, desired)
+    }
+    if (!wanted || !latest) {
+        console.info(`X ${paddedName}${version} (${desired})`)
+        console.warn(`X Failed, no ${desired} version for ${
+            name}, sticking to ${version}`)
+        return null
+    }
+    if (verType === "alias") {
+        wanted = `npm:${alias}@${wanted}`
+    }
+    if (wanted === version) {
+        console.info(`  ${paddedName}${version} (${desired})`)
+    } else {
+        console.info(`> ${paddedName}${
+            version} => ${wanted} (${desired})`)
+    }
+    if (desired !== "latest") {
+        console.info(`  (latest is ${latest})`)
+    }
+    return wanted
+}
+
 const packageJson = join(process.cwd(), "package.json")
 let pack = {}
 try {
@@ -139,22 +223,7 @@ for (const depType of ["dependencies", "devDependencies"]) {
     console.info(`= Updating ${depType} =`)
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
-        let verType = "semver"
-        let alias = null
-        if (version.startsWith("npm:")) {
-            alias = version.replace(/^npm:/, "")
-                .split("@").slice(0, -1).join("@")
-            verType = "alias"
-        }
-        const hasSlashes = name.includes("/") || version.includes("/")
-        if (hasSlashes && !name.startsWith("@")) {
-            verType = "git"
-            if (version.startsWith("http:") || version.startsWith("https:")) {
-                verType = "url"
-            } else if (version.startsWith("file:")) {
-                verType = "file"
-            }
-        }
+        const {verType, alias} = findVersionType(name, version)
         const desired = config.overrides[name] ?? "latest"
         if (verType === "file" || verType === "git" || verType === "url") {
             const hash = desired.replace(/^#+/g, "")
@@ -166,47 +235,12 @@ for (const depType of ["dependencies", "devDependencies"]) {
             }
             continue
         }
-        let info = null
-        try {
-            info = JSON.parse(execSync(
-                `npm view ${alias ?? name} --json`, {"encoding": "utf8"}))
-        } catch {
-            // Can't update package without this info, next if will be entered.
+        const wanted = findWantedVersion({
+            alias, desired, name, paddedName, verType, version
+        })
+        if (wanted) {
+            pack[depType][name] = wanted
         }
-        if (!info?.["dist-tags"] || !info?.versions) {
-            console.info(`X ${paddedName}${version} (${desired})`)
-            console.warn(`X Failed, npm request for ${
-                name} gave invalid info, sticking to ${version}`)
-            continue
-        }
-        let {latest} = info["dist-tags"]
-        if (desired === "latest" && config.prefixChar) {
-            latest = config.prefixChar + latest
-        }
-        let wanted = latest
-        if (desired !== "latest") {
-            wanted = info["dist-tags"][desired]
-                ?? findByRange(info.versions, desired)
-        }
-        if (!wanted || !latest) {
-            console.info(`X ${paddedName}${version} (${desired})`)
-            console.warn(`X Failed, no ${desired} version for ${
-                name}, sticking to ${version}`)
-            continue
-        }
-        if (verType === "alias") {
-            wanted = `npm:${alias}@${wanted}`
-        }
-        if (wanted === version) {
-            console.info(`  ${paddedName}${version} (${desired})`)
-        } else {
-            console.info(`> ${paddedName}${
-                version} => ${wanted} (${desired})`)
-        }
-        if (desired !== "latest") {
-            console.info(`  (latest is ${latest})`)
-        }
-        pack[depType][name] = wanted
     }
 }
 console.info(`= Installing =`)
