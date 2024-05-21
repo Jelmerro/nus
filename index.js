@@ -8,6 +8,7 @@ import maxSatisfying from "semver/ranges/max-satisfying.js"
 const config = {
     "audit": true,
     "dedup": true,
+    /** @type {number|"\t"} */
     "indent": 4,
     "npm": {
         "force": false,
@@ -17,6 +18,7 @@ const config = {
         "silent": false,
         "verbose": false
     },
+    /** @type {{[name: string]: string}} */
     "overrides": {},
     "prefixChar": ""
 }
@@ -62,17 +64,21 @@ const findVersionType = (name, version) => {
 /**
  * Find the wanted version for a given package based on desired version string.
  * @param {{
- *   alias: string,
+ *   alias?: string|null,
  *   desired: string,
  *   name: string,
  *   paddedName: string,
- *   verType: string,
+ *   verType: "alias"|"semver",
  *   version: string,
  * }} opts
  */
 const findWantedVersion = ({
     alias, desired, name, paddedName, verType, version
 }) => {
+    /** @type {{
+     *   "dist-tags": {[name: string]: string|null},
+     *   "versions": string[]
+     * }|null} */
     let info = null
     try {
         info = JSON.parse(execSync(
@@ -117,7 +123,8 @@ const findWantedVersion = ({
 }
 
 const packageJson = join(process.cwd(), "package.json")
-let pack = {}
+/** @type {import('./package.json')|null} */
+let pack = null
 try {
     const packStr = readFileSync(packageJson, {"encoding": "utf8"}).toString()
     const line = packStr.split("\n").find(
@@ -141,7 +148,15 @@ if (existsSync(nusConfigFile)) {
         console.warn("X Ignoring 'nus.config.js' config, invalid JS")
     }
     if (customConfig) {
-        const npmArgs = Object.keys(config.npm)
+        /** @type {(keyof typeof config.npm)[]} */
+        const npmArgs = [
+            "force",
+            "global",
+            "ignoreScripts",
+            "legacy",
+            "silent",
+            "verbose"
+        ]
         for (const npmArg of npmArgs) {
             if (typeof customConfig?.npm?.[npmArg] === "boolean") {
                 config.npm[npmArg] = customConfig.npm[npmArg]
@@ -150,7 +165,9 @@ if (existsSync(nusConfigFile)) {
                     npmArg}', must be boolean`)
             }
         }
-        for (const arg of ["audit", "dedup"]) {
+        /** @type {("audit"|"dedup")[]} */
+        const boolOpts = ["audit", "dedup"]
+        for (const arg of boolOpts) {
             if (typeof customConfig?.[arg] === "boolean") {
                 config[arg] = customConfig[arg]
             } else if (customConfig[arg] !== undefined) {
@@ -191,7 +208,7 @@ if (existsSync(nusConfigFile)) {
 const nusOverridesFile = join(process.cwd(), "nus.overrides.json")
 if (existsSync(nusOverridesFile)) {
     try {
-        const overrides = JSON.parse(readFileSync(nusOverridesFile))
+        const overrides = JSON.parse(readFileSync(nusOverridesFile).toString())
         if (typeof overrides === "object" && !Array.isArray(overrides)) {
             for (const [key, value] of Object.entries(overrides)) {
                 if (typeof value !== "string") {
@@ -210,14 +227,20 @@ if (existsSync(nusOverridesFile)) {
     }
 }
 let longestName = 20
-for (const name of Object.keys(pack.dependencies ?? {})) {
-    longestName = Math.max(longestName, name.length)
+if (pack?.dependencies) {
+    for (const name of Object.keys(pack.dependencies)) {
+        longestName = Math.max(longestName, name.length)
+    }
 }
-for (const name of Object.keys(pack.devDependencies ?? {})) {
-    longestName = Math.max(longestName, name.length)
+if (pack?.devDependencies) {
+    for (const name of Object.keys(pack.devDependencies)) {
+        longestName = Math.max(longestName, name.length)
+    }
 }
-for (const depType of ["dependencies", "devDependencies"]) {
-    if (!pack[depType]) {
+/** @type {("dependencies"|"devDependencies")[]} */
+const depTypes = ["dependencies", "devDependencies"]
+for (const depType of depTypes) {
+    if (!pack || !pack[depType]) {
         continue
     }
     console.info(`= Updating ${depType} =`)
@@ -231,15 +254,17 @@ for (const depType of ["dependencies", "devDependencies"]) {
                 console.info(`- ${paddedName}${verType}`)
             } else {
                 console.info(`- ${paddedName}git#${hash}`)
+                // @ts-expect-error Indexing does not take depType into account
                 pack[depType][name] = `${version.split("#")[0]}#${hash}`
             }
-            continue
-        }
-        const wanted = findWantedVersion({
-            alias, desired, name, paddedName, verType, version
-        })
-        if (wanted) {
-            pack[depType][name] = wanted
+        } else {
+            const wanted = findWantedVersion({
+                alias, desired, name, paddedName, verType, version
+            })
+            if (wanted) {
+                // @ts-expect-error Indexing does not take depType into account
+                pack[depType][name] = wanted
+            }
         }
     }
 }

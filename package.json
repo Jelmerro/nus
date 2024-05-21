@@ -8,6 +8,13 @@
     "bin": {
         "nus": "./index.js"
     },
+    "scripts": {
+        "fix": "eslint --fix index.js",
+        "lint": "npm run eslint && npm run tsc",
+        "eslint": "eslint index.js",
+        "tsc": "tsc",
+        "update": "npx -y jelmerro/nus"
+    },
     "repository": "https://github.com/Jelmerro/nus",
     "keywords": [
         "Nodejs",
@@ -22,7 +29,10 @@
         "semver": "7.6.2"
     },
     "devDependencies": {
-        "eslint-config": "github:Jelmerro/eslint-config"
+        "@types/node": "20.12.12",
+        "@types/semver": "7.5.8",
+        "eslint-config": "github:Jelmerro/eslint-config",
+        "typescript": "5.4.5"
     },
     "engines": {
         "node": ">=16"
