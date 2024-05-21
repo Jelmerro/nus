@@ -140,6 +140,10 @@ for (const depType of ["dependencies", "devDependencies"]) {
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
         const desired = config.overrides[name] ?? "latest"
+        if (version.startsWith("npm:")) {
+            console.info(`- ${paddedName}${version}`)
+            continue
+        }
         if (version.includes("/") && !version.startsWith("@")) {
             const hash = desired.replace(/^#+/g, "")
             if (hash === "latest") {
@@ -150,8 +154,13 @@ for (const depType of ["dependencies", "devDependencies"]) {
             }
             continue
         }
-        const info = JSON.parse(execSync(
-            `npm view ${name} --json`, {"encoding": "utf8"}))
+        let info = null
+        try {
+            info = JSON.parse(execSync(
+                `npm view ${name} --json`, {"encoding": "utf8"}))
+        } catch {
+            // Info will be null and updating this package will be skipped.
+        }
         if (!info?.["dist-tags"] || !info?.versions) {
             console.info(`X ${paddedName}${version} (${desired})`)
             console.warn(`X Failed, npm request for ${
