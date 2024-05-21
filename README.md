@@ -99,6 +99,9 @@ you can also use `nus.overrides.json` in the root of your project.
 This file does not support any other config, but just the overrides object like above.
 You are free to have both a config and an overrides file,
 but if you have the same package name in both files the overrides file has priority.
+Direct source urls (such as those starting with `http:`/`https:`) or file dependencies are always skipped.
+Aliased packages, such as `"custom-package": "npm:package@version"`, are by default updated to latest,
+even if `package` is overridden, but can be overridden separately by using the `custom-package` name instead.
 
 #### Git overrides
 
