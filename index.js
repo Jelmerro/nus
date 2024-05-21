@@ -139,15 +139,27 @@ for (const depType of ["dependencies", "devDependencies"]) {
     console.info(`= Updating ${depType} =`)
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
-        const desired = config.overrides[name] ?? "latest"
+        let verType = "semver"
+        let alias = null
         if (version.startsWith("npm:")) {
-            console.info(`- ${paddedName}${version}`)
-            continue
+            alias = version.replace(/^npm:/, "")
+                .split("@").slice(0, -1).join("@")
+            verType = "alias"
         }
-        if (version.includes("/") && !version.startsWith("@")) {
+        const hasSlashes = name.includes("/") || version.includes("/")
+        if (hasSlashes && !name.startsWith("@")) {
+            verType = "git"
+            if (version.startsWith("http:") || version.startsWith("https:")) {
+                verType = "url"
+            } else if (version.startsWith("file:")) {
+                verType = "file"
+            }
+        }
+        const desired = config.overrides[name] ?? "latest"
+        if (verType === "file" || verType === "git" || verType === "url") {
             const hash = desired.replace(/^#+/g, "")
-            if (hash === "latest") {
-                console.info(`- ${paddedName}git`)
+            if (hash === "latest" || verType !== "git") {
+                console.info(`- ${paddedName}${verType}`)
             } else {
                 console.info(`- ${paddedName}git#${hash}`)
                 pack[depType][name] = `${version.split("#")[0]}#${hash}`
@@ -157,9 +169,9 @@ for (const depType of ["dependencies", "devDependencies"]) {
         let info = null
         try {
             info = JSON.parse(execSync(
-                `npm view ${name} --json`, {"encoding": "utf8"}))
+                `npm view ${alias ?? name} --json`, {"encoding": "utf8"}))
         } catch {
-            // Info will be null and updating this package will be skipped.
+            // Can't update package without this info, next if will be entered.
         }
         if (!info?.["dist-tags"] || !info?.versions) {
             console.info(`X ${paddedName}${version} (${desired})`)
@@ -182,13 +194,16 @@ for (const depType of ["dependencies", "devDependencies"]) {
                 name}, sticking to ${version}`)
             continue
         }
+        if (verType === "alias") {
+            wanted = `npm:${alias}@${wanted}`
+        }
         if (wanted === version) {
             console.info(`  ${paddedName}${version} (${desired})`)
         } else {
             console.info(`> ${paddedName}${
                 version} => ${wanted} (${desired})`)
         }
-        if (wanted !== latest) {
+        if (desired !== "latest") {
             console.info(`  (latest is ${latest})`)
         }
         pack[depType][name] = wanted
