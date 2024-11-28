@@ -272,7 +272,7 @@ console.info(`= Installing =`)
 writeFileSync(packageJson, `${JSON.stringify(pack, null, config.indent)}\n`)
 rmSync(join(process.cwd(), "package-lock.json"), {"force": true})
 rmSync(join(process.cwd(), "node_modules"), {"force": true, "recursive": true})
-let args = ""
+let args = " --no-fund"
 if (config.npm.force) {
     args += " --force"
 }
