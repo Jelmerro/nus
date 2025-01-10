@@ -81,8 +81,8 @@ const findWantedVersion = ({
      * }|null} */
     let info = null
     try {
-        info = JSON.parse(execSync(
-            `npm view ${alias ?? name} --json`, {"encoding": "utf8"}))
+        info = JSON.parse(execSync(`npm view ${
+            alias ?? name} --json versions dist-tags`, {"encoding": "utf8"}))
     } catch {
         // Can't update package without this info, next if will be entered.
     }
