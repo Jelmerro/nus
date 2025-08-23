@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import {existsSync, readFileSync, rmSync, writeFileSync} from "fs"
-import {execSync} from "child_process"
-import {join} from "path"
+import {execSync} from "node:child_process"
+import {existsSync, readFileSync, rmSync, writeFileSync} from "node:fs"
+import {join} from "node:path"
 import maxSatisfying from "semver/ranges/max-satisfying.js"
 
 const config = {
@@ -73,7 +73,7 @@ const findVersionType = (name, version) => {
  * }} opts
  */
 const findWantedVersion = ({
-    alias, desired, name, paddedName, verType, version
+    alias, desired, name, paddedName, version, verType
 }) => {
     /** @type {{
      *   "dist-tags": {[name: string]: string|null},
@@ -246,7 +246,7 @@ for (const depType of depTypes) {
     console.info(`= Updating ${depType} =`)
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
-        const {verType, alias} = findVersionType(name, version)
+        const {alias, verType} = findVersionType(name, version)
         const desired = config.overrides[name] ?? "latest"
         if (verType === "file" || verType === "git" || verType === "url") {
             const hash = desired.replace(/^#+/g, "")
@@ -259,7 +259,7 @@ for (const depType of depTypes) {
             }
         } else {
             const wanted = findWantedVersion({
-                alias, desired, name, paddedName, verType, version
+                alias, desired, name, paddedName, version, verType
             })
             if (wanted) {
                 // @ts-expect-error Indexing does not take depType into account
