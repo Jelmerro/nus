@@ -49,6 +49,7 @@ export default {
     "audit": true,
     "dedup": true,
     "indent": 4,
+    "minimumReleaseAge": 0,
     "npm": {
         "force": false,
         "global": false,
@@ -75,6 +76,10 @@ such as "~" for only patch upgrades and "^" for any non-major ones.
 This character is added only to the package.json, mostly as a suggestion,
 as you should rarely if ever run a plain `npm i` instead of `npm ci`,
 hence why by default it is left empty to specify the exact version.
+The minimumReleaseAge option (in seconds) allows you to skip packages that were released too recently,
+helping to avoid bleeding-edge releases that might be unstable.
+For example, setting it to 604800 (7 days) will only update to versions that are at least a week old.
+Set to 0 (default) to disable this check and allow updates to the latest versions immediately.
 CommonJS's `module.exports` syntax will also work if you have not set `"type": "module"` yet.
 
 ### Overrides

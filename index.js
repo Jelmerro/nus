@@ -10,6 +10,8 @@ const config = {
     "dedup": true,
     /** @type {number|"\t"} */
     "indent": 4,
+    /** @type {number} */
+    "minimumReleaseAge": 0,
     "npm": {
         "force": false,
         "global": false,
@@ -77,12 +79,15 @@ const findWantedVersion = ({
 }) => {
     /** @type {{
      *   "dist-tags": {[name: string]: string|null},
+     *   "time": {[version: string]: string},
      *   "versions": string[]
      * }|null} */
     let info = null
     try {
-        info = JSON.parse(execSync(`npm view ${
-            alias ?? name} --json versions dist-tags`, {"encoding": "utf8"}))
+        info = JSON.parse(execSync(
+            `npm view ${alias ?? name} --json versions dist-tags time`,
+            {"encoding": "utf8"}
+        ))
     } catch {
         // Can't update package without this info, next if will be entered.
     }
@@ -106,6 +111,23 @@ const findWantedVersion = ({
         console.warn(`X Failed, no ${desired} version for ${
             name}, sticking to ${version}`)
         return null
+    }
+    // Check minimum release age if configured
+    if (config.minimumReleaseAge > 0 && info.time) {
+        let wantedVersionForTimeCheck = wanted.replace(config.prefixChar, "")
+        if (verType === "alias") {
+            wantedVersionForTimeCheck = wanted.replace(/^npm:.*@/, "")
+        }
+        const releaseTime = info.time[wantedVersionForTimeCheck]
+        if (releaseTime) {
+            const releaseDate = new Date(releaseTime)
+            const minimumAge = Date.now() - config.minimumReleaseAge * 1000
+            if (releaseDate.getTime() > minimumAge) {
+                console.info(`- ${paddedName}${version} => ${wanted} `
+                    + `(too new, released ${releaseTime})`)
+                return version
+            }
+        }
     }
     if (verType === "alias") {
         wanted = `npm:${alias}@${wanted}`
@@ -182,6 +204,13 @@ if (existsSync(nusConfigFile)) {
         } else if (customConfig.indent !== undefined) {
             console.warn("X Ignoring config for 'indent', "
                 + "must be number or '\\t'")
+        }
+        if (typeof customConfig.minimumReleaseAge === "number"
+            && customConfig.minimumReleaseAge >= 0) {
+            config.minimumReleaseAge = customConfig.minimumReleaseAge
+        } else if (customConfig.minimumReleaseAge !== undefined) {
+            console.warn("X Ignoring config for 'minimumReleaseAge', "
+                + "must be a non-negative number")
         }
         const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]
         if (validPrefixes.includes(customConfig.prefixChar)) {
