@@ -11,7 +11,7 @@ const config = {
     /** @type {number|"\t"} */
     "indent": 4,
     /** @type {number} */
-    "minimumReleaseAge": 0,
+    "minimumReleasedDaysAgo": 0,
     "npm": {
         "force": false,
         "global": false,
@@ -86,8 +86,7 @@ const findWantedVersion = ({
     try {
         info = JSON.parse(execSync(
             `npm view ${alias ?? name} --json versions dist-tags time`,
-            {"encoding": "utf8"}
-        ))
+            {"encoding": "utf8"}))
     } catch {
         // Can't update package without this info, next if will be entered.
     }
