@@ -72,10 +72,11 @@ const findVersionType = (name, version) => {
  *   paddedName: string,
  *   verType: "alias"|"semver",
  *   version: string,
+ *   padSpace: string,
  * }} opts
  */
 const findWantedVersion = ({
-    alias, desired, name, paddedName, version, verType
+    alias, desired, name, paddedName, version, verType, padSpace
 }) => {
     /** @type {{
      *   "dist-tags": {[name: string]: string|null},
@@ -138,10 +139,10 @@ const findWantedVersion = ({
             version} => ${wanted} (${desired})`)
     }
     if (moreRecentVersion) {
-        console.info(`  ${paddedName}latest too recent: ${moreRecentVersion}`)
+        console.info(`  ${padSpace}(latest too recent: ${moreRecentVersion})`)
     }
     if (desired !== "latest") {
-        console.info(`  ${paddedName}(latest is ${latest})`)
+        console.info(`  ${padSpace}(latest is ${latest})`)
     }
     return wanted
 }
@@ -277,6 +278,7 @@ for (const depType of depTypes) {
     console.info(`= Updating ${depType} =`)
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
+        const padSpace = ` ${"".padEnd(longestName, " ")}`
         const {alias, verType} = findVersionType(name, version)
         const desired = config.overrides[name] ?? "latest"
         if (verType === "file" || verType === "git" || verType === "url") {
@@ -290,7 +292,7 @@ for (const depType of depTypes) {
             }
         } else {
             const wanted = findWantedVersion({
-                alias, desired, name, paddedName, version, verType
+                alias, desired, name, paddedName, padSpace, version, verType
             })
             if (wanted) {
                 // @ts-expect-error Indexing does not take depType into account
