@@ -87,6 +87,10 @@ const findWantedVersion = ({
         info = JSON.parse(execSync(
             `npm view ${alias ?? name} --json dist-tags time`,
             {"encoding": "utf8"}))
+        // Map keys of time object to build versions array
+        if (info) {
+            info.versions = Object.keys(info.time)
+        }
     } catch {
         // Can't update package without this info, next if will be entered.
     }
@@ -113,14 +117,12 @@ const findWantedVersion = ({
     }
     // Check minimum release age if configured
     if (config.minimumReleasedDaysAgo > 0 && info.time) {
-        const exactWanted = wanted.replace(config.prefixChar, "")
-        const releaseDate = new Date(info.time[exactWanted]).getTime()
         const dayInMs = 24 * 60 * 60 * 1000
-        const minimumAge = Date.now() - config.minimumReleasedDaysAgo * dayInMs;
-        if (releaseDate > minimumAge) {
-            console.info(`(too new, released ${releaseDate.toLocaleString()})`)
-            return version
-        }
+        const minimumAge = Date.now() - config.minimumReleasedDaysAgo * dayInMs
+        const mostRecentAllowedVersion = info.versions.find(
+            v => new Date(info.time[v]).getTime() < minimumAge
+        )
+        wanted = mostRecentAllowedVersion ?? version
     }
     if (verType === "alias") {
         wanted = `npm:${alias}@${wanted}`
