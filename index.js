@@ -10,6 +10,8 @@ const config = {
     "dedup": true,
     /** @type {number|"\t"} */
     "indent": 4,
+    /** @type {number} */
+    "minDays": 0,
     "npm": {
         "force": false,
         "global": false,
@@ -70,23 +72,30 @@ const findVersionType = (name, version) => {
  *   paddedName: string,
  *   verType: "alias"|"semver",
  *   version: string,
+ *   padSpace: string,
  * }} opts
  */
 const findWantedVersion = ({
-    alias, desired, name, paddedName, version, verType
+    alias, desired, name, paddedName, padSpace, version, verType
 }) => {
     /** @type {{
      *   "dist-tags": {[name: string]: string|null},
+     *   "time": {[version: string]: string},
      *   "versions": string[]
      * }|null} */
     let info = null
     try {
-        info = JSON.parse(execSync(`npm view ${
-            alias ?? name} --json versions dist-tags`, {"encoding": "utf8"}))
+        info = JSON.parse(execSync(
+            `npm view ${alias ?? name} --json dist-tags time`,
+            {"encoding": "utf8"}))
+        // Map keys of time object to build versions array
+        if (info) {
+            info.versions = Object.keys(info.time)
+        }
     } catch {
         // Can't update package without this info, next if will be entered.
     }
-    if (!info?.["dist-tags"] || !info?.versions) {
+    if (!info?.["dist-tags"] || !info?.time) {
         console.info(`X ${paddedName}${version} (${desired})`)
         console.warn(`X Failed, npm request for ${
             name} gave invalid info, sticking to ${version}`)
@@ -97,6 +106,19 @@ const findWantedVersion = ({
         latest = config.prefixChar + latest
     }
     let wanted = latest
+    // Check minimum release date if configured
+    let moreRecent = null
+    if (config.minDays > 0 && desired === "latest") {
+        const dayInMs = 24 * 60 * 60 * 1000
+        const minAge = Date.now() - config.minDays * dayInMs
+        info.versions = info.versions.filter(
+            v => new Date(info.time[v]).getTime() <= minAge
+        )
+        wanted = findByRange(info.versions, `<=${latest}`)
+        if (wanted !== latest) {
+            moreRecent = latest
+        }
+    }
     if (desired !== "latest") {
         wanted = info["dist-tags"][desired]
             ?? findByRange(info.versions, desired)
@@ -116,8 +138,11 @@ const findWantedVersion = ({
         console.info(`> ${paddedName}${
             version} => ${wanted} (${desired})`)
     }
+    if (moreRecent) {
+        console.info(`  ${padSpace}(latest too recent: ${moreRecent})`)
+    }
     if (desired !== "latest") {
-        console.info(`  (latest is ${latest})`)
+        console.info(`  ${padSpace}(latest is ${latest})`)
     }
     return wanted
 }
@@ -183,6 +208,13 @@ if (existsSync(nusConfigFile)) {
             console.warn("X Ignoring config for 'indent', "
                 + "must be number or '\\t'")
         }
+        if (typeof customConfig.minDays === "number"
+            && customConfig.minDays > 0) {
+            config.minDays = customConfig.minDays
+        } else if (customConfig.minDays !== undefined) {
+            console.warn("X Ignoring config for 'minDays', "
+                + "must be a non-negative number")
+        }
         const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]
         if (validPrefixes.includes(customConfig.prefixChar)) {
             config.prefixChar = customConfig.prefixChar
@@ -246,6 +278,7 @@ for (const depType of depTypes) {
     console.info(`= Updating ${depType} =`)
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
+        const padSpace = ` ${"".padEnd(longestName, " ")}`
         const {alias, verType} = findVersionType(name, version)
         const desired = config.overrides[name] ?? "latest"
         if (verType === "file" || verType === "git" || verType === "url") {
@@ -259,7 +292,7 @@ for (const depType of depTypes) {
             }
         } else {
             const wanted = findWantedVersion({
-                alias, desired, name, paddedName, version, verType
+                alias, desired, name, paddedName, padSpace, version, verType
             })
             if (wanted) {
                 // @ts-expect-error Indexing does not take depType into account
