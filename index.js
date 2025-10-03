@@ -11,7 +11,7 @@ const config = {
     /** @type {number|"\t"} */
     "indent": 4,
     /** @type {number} */
-    "minimumReleasedDaysAgo": 0,
+    "minDays": 0,
     "npm": {
         "force": false,
         "global": false,
@@ -76,7 +76,7 @@ const findVersionType = (name, version) => {
  * }} opts
  */
 const findWantedVersion = ({
-    alias, desired, name, paddedName, version, verType, padSpace
+    alias, desired, name, paddedName, padSpace, version, verType
 }) => {
     /** @type {{
      *   "dist-tags": {[name: string]: string|null},
@@ -108,11 +108,11 @@ const findWantedVersion = ({
     let wanted = latest
     // Check minimum release age if configured
     let moreRecentVersion = null
-    if (config.minimumReleasedDaysAgo > 0 && desired === "latest") {
+    if (config.minDays > 0 && desired === "latest") {
         const dayInMs = 24 * 60 * 60 * 1000
-        const minimumAge = Date.now() - config.minimumReleasedDaysAgo * dayInMs
+        const minAge = Date.now() - config.minDays * dayInMs
         info.versions = info.versions.filter(
-            v => new Date(info.time[v]).getTime() <= minimumAge
+            v => new Date(info.time[v]).getTime() <= minAge
         )
         wanted = findByRange(info.versions, `<=${latest}`)
         if (wanted !== latest) {
@@ -208,11 +208,11 @@ if (existsSync(nusConfigFile)) {
             console.warn("X Ignoring config for 'indent', "
                 + "must be number or '\\t'")
         }
-        if (typeof customConfig.minimumReleasedDaysAgo === "number"
-            && customConfig.minimumReleasedDaysAgo > 0) {
-            config.minimumReleasedDaysAgo = customConfig.minimumReleasedDaysAgo
-        } else if (customConfig.minimumReleasedDaysAgo !== undefined) {
-            console.warn("X Ignoring config for 'minimumReleasedDaysAgo', "
+        if (typeof customConfig.minDays === "number"
+            && customConfig.minDays > 0) {
+            config.minDays = customConfig.minDays
+        } else if (customConfig.minDays !== undefined) {
+            console.warn("X Ignoring config for 'minDays', "
                 + "must be a non-negative number")
         }
         const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]

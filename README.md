@@ -49,7 +49,7 @@ export default {
     "audit": true,
     "dedup": true,
     "indent": 4,
-    "minimumReleasedDaysAgo": 0,
+    "minDays": 0,
     "npm": {
         "force": false,
         "global": false,
@@ -76,7 +76,7 @@ such as "~" for only patch upgrades and "^" for any non-major ones.
 This character is added only to the package.json, mostly as a suggestion,
 as you should rarely if ever run a plain `npm i` instead of `npm ci`,
 hence why by default it is left empty to specify the exact version.
-The minimumReleasedDaysAgo option allows you to upgrade packages to a release that is at least x days old.
+The minDays option allows you to upgrade packages to a release that is at least x days old.
 CommonJS's `module.exports` syntax will also work if you have not set `"type": "module"` yet.
 
 ### Overrides
