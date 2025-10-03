@@ -105,6 +105,19 @@ const findWantedVersion = ({
         latest = config.prefixChar + latest
     }
     let wanted = latest
+    // Check minimum release age if configured
+    let moreRecentVersion = null
+    if (config.minimumReleasedDaysAgo > 0 && desired === "latest") {
+        const dayInMs = 24 * 60 * 60 * 1000
+        const minimumAge = Date.now() - config.minimumReleasedDaysAgo * dayInMs
+        info.versions = info.versions.filter(
+            v => new Date(info.time[v]).getTime() <= minimumAge
+        )
+        wanted = findByRange(info.versions, `<=${latest}`)
+        if (wanted !== latest) {
+            moreRecentVersion = latest
+        }
+    }
     if (desired !== "latest") {
         wanted = info["dist-tags"][desired]
             ?? findByRange(info.versions, desired)
@@ -115,15 +128,6 @@ const findWantedVersion = ({
             name}, sticking to ${version}`)
         return null
     }
-    // Check minimum release age if configured
-    if (config.minimumReleasedDaysAgo > 0 && info.time) {
-        const dayInMs = 24 * 60 * 60 * 1000
-        const minimumAge = Date.now() - config.minimumReleasedDaysAgo * dayInMs
-        const mostRecentAllowedVersion = info.versions.find(
-            v => new Date(info.time[v]).getTime() < minimumAge
-        )
-        wanted = mostRecentAllowedVersion ?? version
-    }
     if (verType === "alias") {
         wanted = `npm:${alias}@${wanted}`
     }
@@ -133,8 +137,11 @@ const findWantedVersion = ({
         console.info(`> ${paddedName}${
             version} => ${wanted} (${desired})`)
     }
+    if (moreRecentVersion) {
+        console.info(`  ${paddedName}latest too recent: ${moreRecentVersion}`)
+    }
     if (desired !== "latest") {
-        console.info(`  (latest is ${latest})`)
+        console.info(`  ${paddedName}(latest is ${latest})`)
     }
     return wanted
 }
