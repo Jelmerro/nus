@@ -106,8 +106,8 @@ const findWantedVersion = ({
         latest = config.prefixChar + latest
     }
     let wanted = latest
-    // Check minimum release age if configured
-    let moreRecentVersion = null
+    // Check minimum release date if configured
+    let moreRecent = null
     if (config.minDays > 0 && desired === "latest") {
         const dayInMs = 24 * 60 * 60 * 1000
         const minAge = Date.now() - config.minDays * dayInMs
@@ -116,7 +116,7 @@ const findWantedVersion = ({
         )
         wanted = findByRange(info.versions, `<=${latest}`)
         if (wanted !== latest) {
-            moreRecentVersion = latest
+            moreRecent = latest
         }
     }
     if (desired !== "latest") {
@@ -138,8 +138,8 @@ const findWantedVersion = ({
         console.info(`> ${paddedName}${
             version} => ${wanted} (${desired})`)
     }
-    if (moreRecentVersion) {
-        console.info(`  ${padSpace}(latest too recent: ${moreRecentVersion})`)
+    if (moreRecent) {
+        console.info(`  ${padSpace}(latest too recent: ${moreRecent})`)
     }
     if (desired !== "latest") {
         console.info(`  ${padSpace}(latest is ${latest})`)
