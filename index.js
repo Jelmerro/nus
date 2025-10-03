@@ -85,12 +85,12 @@ const findWantedVersion = ({
     let info = null
     try {
         info = JSON.parse(execSync(
-            `npm view ${alias ?? name} --json versions dist-tags time`,
+            `npm view ${alias ?? name} --json dist-tags time`,
             {"encoding": "utf8"}))
     } catch {
         // Can't update package without this info, next if will be entered.
     }
-    if (!info?.["dist-tags"] || !info?.versions) {
+    if (!info?.["dist-tags"] || !info?.time) {
         console.info(`X ${paddedName}${version} (${desired})`)
         console.warn(`X Failed, npm request for ${
             name} gave invalid info, sticking to ${version}`)
@@ -112,20 +112,14 @@ const findWantedVersion = ({
         return null
     }
     // Check minimum release age if configured
-    if (config.minimumReleaseAge > 0 && info.time) {
-        let wantedVersionForTimeCheck = wanted.replace(config.prefixChar, "")
-        if (verType === "alias") {
-            wantedVersionForTimeCheck = wanted.replace(/^npm:.*@/, "")
-        }
-        const releaseTime = info.time[wantedVersionForTimeCheck]
-        if (releaseTime) {
-            const releaseDate = new Date(releaseTime)
-            const minimumAge = Date.now() - config.minimumReleaseAge * 1000
-            if (releaseDate.getTime() > minimumAge) {
-                console.info(`- ${paddedName}${version} => ${wanted} `
-                    + `(too new, released ${releaseTime})`)
-                return version
-            }
+    if (config.minimumReleasedDaysAgo > 0 && info.time) {
+        const exactWanted = wanted.replace(config.prefixChar, "")
+        const releaseDate = new Date(info.time[exactWanted]).getTime()
+        const dayInMs = 24 * 60 * 60 * 1000
+        const minimumAge = Date.now() - config.minimumReleasedDaysAgo * dayInMs;
+        if (releaseDate > minimumAge) {
+            console.info(`(too new, released ${releaseDate.toLocaleString()})`)
+            return version
         }
     }
     if (verType === "alias") {
@@ -204,11 +198,11 @@ if (existsSync(nusConfigFile)) {
             console.warn("X Ignoring config for 'indent', "
                 + "must be number or '\\t'")
         }
-        if (typeof customConfig.minimumReleaseAge === "number"
-            && customConfig.minimumReleaseAge >= 0) {
-            config.minimumReleaseAge = customConfig.minimumReleaseAge
-        } else if (customConfig.minimumReleaseAge !== undefined) {
-            console.warn("X Ignoring config for 'minimumReleaseAge', "
+        if (typeof customConfig.minimumReleasedDaysAgo === "number"
+            && customConfig.minimumReleasedDaysAgo > 0) {
+            config.minimumReleasedDaysAgo = customConfig.minimumReleasedDaysAgo
+        } else if (customConfig.minimumReleasedDaysAgo !== undefined) {
+            console.warn("X Ignoring config for 'minimumReleasedDaysAgo', "
                 + "must be a non-negative number")
         }
         const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]
