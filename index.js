@@ -112,14 +112,22 @@ const findWantedVersion = ({
     if (verType === "alias") {
         wanted = `npm:${alias}@${wanted}`
     }
-    if (wanted === version) {
-        console.info(`  ${paddedName}${version} (${desired})`)
-    } else {
-        console.info(`> ${paddedName}${
-            version} => ${wanted} (${desired})`)
-    }
+    let desiredMsg = ""
     if (desired !== "latest") {
-        console.info(`  (latest is ${latest})`)
+        if (desired === latest) {
+            desiredMsg = ` (${desired})`
+        } else {
+            desiredMsg = ` (${desired} ~ ${latest})`
+        }
+    }
+    if (wanted === version) {
+        if (desiredMsg && desired !== latest) {
+            console.info(`~ ${paddedName}${version}${desiredMsg}`)
+        } else {
+            console.info(`  ${paddedName}${version}${desiredMsg}`)
+        }
+    } else {
+        console.info(`> ${paddedName}${version} > ${wanted}${desiredMsg}`)
     }
     return wanted
 }

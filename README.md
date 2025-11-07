@@ -36,6 +36,22 @@ finally install the packages from scratch based on the updated `package.json` fi
 The overrides are the main way to change package versions using nus if needed,
 so see below for all information about configuring it using the config file.
 
+### Output
+
+The nus CLI output is intended to be compact and to the point.
+The legend of the output can be summarized as follows:
+
+- Each dependency takes up one line that includes the name and current version
+- For updated packages, the old and new version are listed separated by `>`
+    - The line will be prefixed with `> ` instead of just spaces so it can be easily spotted
+- For overridden packages, the override policy is listed between brackets
+    - The policy and latest version are both listed separated by `~` if conflicting
+    - The line will be prefixed with `~ ` too if the package was not updated due to the policy
+- For git, url or file packages which are not transparent about changes a `- ` is prefixed
+- Any errors are prefixed with `X `, this can be network or config errors
+
+In short, only the lines that do not start with merely spaces are of interest (because of changes).
+
 ## Config
 
 There is an `nus.config.js` that you can store inside the root of your repo.
