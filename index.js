@@ -16,8 +16,6 @@ const config = {
         "verbose": false
     },
     "dedupe": true,
-    /** @type {number|"\t"} */
-    "indent": 4,
     /** @type {{[name: string]: string}} */
     "overrides": {},
     "prefixChar": "",
@@ -135,13 +133,15 @@ const findWantedVersion = ({
 const packageJson = join(process.cwd(), "package.json")
 /** @type {import('./package.json')|null} */
 let pack = null
+/** @type {number|"\t"} */
+let indent = 2
 try {
     const packStr = readFileSync(packageJson, {"encoding": "utf8"}).toString()
     const line = packStr.split("\n").find(
         l => l.startsWith(" ") || l.startsWith("\t")) ?? ""
-    config.indent = line.search(/\S|$/) ?? config.indent
+    indent = line.search(/\S|$/) ?? 2
     if (line.startsWith("\t")) {
-        config.indent = "\t"
+        indent = "\t"
     }
     pack = JSON.parse(packStr)
 } catch {
@@ -194,14 +194,6 @@ if (existsSync(nusConfigFile)) {
             } else if (customConfig[arg] !== undefined) {
                 console.warn(`X Ignoring '${arg}', must be boolean`)
             }
-        }
-        if (customConfig.indent === "\t" || customConfig.indent === "\\t") {
-            config.indent = "\t"
-        } else if (typeof customConfig.indent === "number") {
-            config.indent = customConfig.indent
-        } else if (customConfig.indent !== undefined) {
-            console.warn("X Ignoring 'indent', "
-                + "must be number or '\\t'")
         }
         const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]
         if (validPrefixes.includes(customConfig.prefixChar)) {
@@ -285,7 +277,7 @@ for (const depType of depTypes) {
     }
 }
 console.info(`= Installing =`)
-writeFileSync(packageJson, `${JSON.stringify(pack, null, config.indent)}\n`)
+writeFileSync(packageJson, `${JSON.stringify(pack, null, indent)}\n`)
 rmSync(join(process.cwd(), "package-lock.json"), {"force": true})
 rmSync(join(process.cwd(), "node_modules"), {"force": true, "recursive": true})
 let installArgs = ""

@@ -64,7 +64,6 @@ A basic config (using all default settings) can look like this:
 export default {
     "audit": true,
     "dedupe": true,
-    "indent": 4,
     "cli": {
         "force": false,
         "global": false,
@@ -78,12 +77,6 @@ export default {
     "tool": "npm
 }
 ```
-
-### Indent
-
-The indent option is the indent level in spaces (or literally `"\t"`) for the package.json.
-If unset, the package.json's current indent level (or tabs) are checked and re-used,
-so in practice you should rarely need to set this explicitly.
 
 ### Tool & CLI
 

@@ -26,13 +26,13 @@
     "funding": "https://github.com/sponsors/Jelmerro/",
     "license": "MIT",
     "dependencies": {
-        "semver": "7.7.2"
+        "semver": "7.7.3"
     },
     "devDependencies": {
-        "@types/node": "24.3.0",
-        "@types/semver": "7.7.0",
+        "@types/node": "24.10.0",
+        "@types/semver": "7.7.1",
         "eslint-config": "github:Jelmerro/eslint-config",
-        "typescript": "5.9.2"
+        "typescript": "5.9.3"
     },
     "engines": {
         "node": ">=16"
