@@ -8,8 +8,8 @@ Node/npm Update Script - A script to update all node/npm packages in a project.
 - Always update to the latest including major (unless overridden using [semver ranges](https://github.com/npm/node-semver))
 - Always do a clean install to update nested dependencies too
 - Specify custom versions to use by tag, range or version (default is latest)
-- Single command to update, install, audit and finally dedup
-- Custom save-prefix, npm install options (force/legacy-peer-deps) and indent
+- Single command to update, install, audit and finally dedupe
+- Custom save-prefix, npm install options (force/legacy-peer-deps) or use pnpm
 - Exact versions in package.json to avoid confusion and surprises
 - Clean CLI output: name, old version, new version & update policy (in brackets)
 
@@ -47,9 +47,9 @@ A basic config (using all default settings) can look like this:
 ```js
 export default {
     "audit": true,
-    "dedup": true,
+    "dedupe": true,
     "indent": 4,
-    "npm": {
+    "cli": {
         "force": false,
         "global": false,
         "ignoreScripts": false,
@@ -58,24 +58,37 @@ export default {
         "verbose": false
     },
     "overrides": {},
-    "prefixChar": ""
+    "prefixChar": "",
+    "tool": "npm
 }
 ```
 
-The audit and dedup options are for running respective npm commands after `npm ci`.
+### Indent
+
 The indent option is the indent level in spaces (or literally `"\t"`) for the package.json.
 If unset, the package.json's current indent level (or tabs) are checked and re-used,
 so in practice you should rarely need to set this explicitly.
-The same is true for and boolean options that are already set to the value you need.
-The npm subkey is used for giving the respective options to npm commands,
-the one that is always run is `npm install`, but by default `audit` and `dedup` are also run.
-They all use the same npm arguments, by default none, to install/audit/dedup the packages.
+
+### Tool & CLI
+
+The optional cli subkey is used for giving the respective options to npm or pnpm commands,
+you can control which of these should be used with the `tool` config key.
+The current supported values for `tool` are: "npm", "npx pnpm" and "pnpm".
+For example, `legacy` will set `--legacy-peer-deps` for npm and `--strict-peer-dependencies=false` for pnpm.
+
+### Audit & Dedupe
+
+The npm/pnpm subcommand that is always run is `install`,
+but by default `audit fix` and `dedupe` are also run to keep the output secure and small.
+You can control/disable this with the toplevel `audit` and `dedupe` options.
+
+### PrefixChar
+
 You can also change the prefixChar option to add a char in front of versions,
 such as "~" for only patch upgrades and "^" for any non-major ones.
 This character is added only to the package.json, mostly as a suggestion,
 as you should rarely if ever run a plain `npm i` instead of `npm ci`,
 hence why by default it is left empty to specify the exact version.
-CommonJS's `module.exports` syntax will also work if you have not set `"type": "module"` yet.
 
 ### Overrides
 

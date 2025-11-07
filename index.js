@@ -7,10 +7,7 @@ import maxSatisfying from "semver/ranges/max-satisfying.js"
 
 const config = {
     "audit": true,
-    "dedup": true,
-    /** @type {number|"\t"} */
-    "indent": 4,
-    "npm": {
+    "cli": {
         "force": false,
         "global": false,
         "ignoreScripts": false,
@@ -18,9 +15,14 @@ const config = {
         "silent": false,
         "verbose": false
     },
+    "dedupe": true,
+    /** @type {number|"\t"} */
+    "indent": 4,
     /** @type {{[name: string]: string}} */
     "overrides": {},
-    "prefixChar": ""
+    "prefixChar": "",
+    /** @type {"npm"|"npx pnpm"|"pnpm"} */
+    "tool": "npm"
 }
 
 /**
@@ -81,14 +83,14 @@ const findWantedVersion = ({
      * }|null} */
     let info = null
     try {
-        info = JSON.parse(execSync(`npm view ${
+        info = JSON.parse(execSync(`${config.tool} view ${
             alias ?? name} --json versions dist-tags`, {"encoding": "utf8"}))
     } catch {
         // Can't update package without this info, next if will be entered.
     }
     if (!info?.["dist-tags"] || !info?.versions) {
         console.info(`X ${paddedName}${version} (${desired})`)
-        console.warn(`X Failed, npm request for ${
+        console.warn(`X Failed, ${config.tool} request for ${
             name} gave invalid info, sticking to ${version}`)
         return null
     }
@@ -136,6 +138,8 @@ try {
     pack = JSON.parse(packStr)
 } catch {
     console.warn("X No package.json found in the current directory")
+}
+if (!pack) {
     process.exit(1)
 }
 const nusConfigFile = join(process.cwd(), "nus.config.js")
@@ -145,11 +149,20 @@ if (existsSync(nusConfigFile)) {
         customConfig = await import(nusConfigFile)
         customConfig = customConfig.default ?? customConfig
     } catch {
-        console.warn("X Ignoring 'nus.config.js' config, invalid JS")
+        console.warn("X Ignoring 'nus.config.js' file, invalid JS")
     }
     if (customConfig) {
-        /** @type {(keyof typeof config.npm)[]} */
-        const npmArgs = [
+        if (customConfig.tool !== undefined) {
+            const tools = ["npm", "npx pnpm", "pnpm"]
+            if (tools.includes(customConfig.tool)) {
+                config.tool = customConfig.tool
+            } else {
+                console.warn(`X Ignoring 'tool', must be: ${
+                    tools.map(p => `'${p}'`).join(", ")}`)
+            }
+        }
+        /** @type {(keyof typeof config.cli)[]} */
+        const cliArgs = [
             "force",
             "global",
             "ignoreScripts",
@@ -157,22 +170,21 @@ if (existsSync(nusConfigFile)) {
             "silent",
             "verbose"
         ]
-        for (const npmArg of npmArgs) {
-            if (typeof customConfig?.npm?.[npmArg] === "boolean") {
-                config.npm[npmArg] = customConfig.npm[npmArg]
-            } else if (customConfig?.npm?.[npmArg] !== undefined) {
-                console.warn(`X Ignoring config for 'npm.${
-                    npmArg}', must be boolean`)
+        for (const cliArg of cliArgs) {
+            if (typeof customConfig.cli?.[cliArg] === "boolean") {
+                config.cli[cliArg] = customConfig.cli[cliArg]
+            } else if (customConfig.cli?.[cliArg] !== undefined) {
+                console.warn(`X Ignoring 'cli.${
+                    cliArg}', must be boolean`)
             }
         }
-        /** @type {("audit"|"dedup")[]} */
-        const boolOpts = ["audit", "dedup"]
+        /** @type {("audit"|"dedupe")[]} */
+        const boolOpts = ["audit", "dedupe"]
         for (const arg of boolOpts) {
-            if (typeof customConfig?.[arg] === "boolean") {
+            if (typeof customConfig[arg] === "boolean") {
                 config[arg] = customConfig[arg]
             } else if (customConfig[arg] !== undefined) {
-                console.warn(`X Ignoring config for 'npm.${
-                    arg}', must be boolean`)
+                console.warn(`X Ignoring '${arg}', must be boolean`)
             }
         }
         if (customConfig.indent === "\t" || customConfig.indent === "\\t") {
@@ -180,27 +192,27 @@ if (existsSync(nusConfigFile)) {
         } else if (typeof customConfig.indent === "number") {
             config.indent = customConfig.indent
         } else if (customConfig.indent !== undefined) {
-            console.warn("X Ignoring config for 'indent', "
+            console.warn("X Ignoring 'indent', "
                 + "must be number or '\\t'")
         }
         const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]
         if (validPrefixes.includes(customConfig.prefixChar)) {
             config.prefixChar = customConfig.prefixChar
         } else if (customConfig.prefixChar !== undefined) {
-            console.warn(`X Ignoring config for 'prefixChar', must be one of: ${
-                validPrefixes.join(" ")}`)
+            console.warn(`X Ignoring 'prefixChar', must be: ${
+                validPrefixes.map(p => `'${p}'`).join(", ")}`)
         }
         if (typeof customConfig.overrides === "object") {
             for (const [key, value] of Object.entries(customConfig.overrides)) {
                 if (typeof value !== "string") {
-                    console.warn(`X Ignoring override '${key}',`
-                        + " value must be string")
+                    console.warn(`X Ignoring override '${
+                        key}', value must be string`)
                     continue
                 }
                 config.overrides[key] = value
             }
         } else if (customConfig.overrides !== undefined) {
-            console.warn("X Ignoring config for 'overrides', "
+            console.warn("X Ignoring 'overrides', "
                 + "must be a flat string-string object")
         }
     }
@@ -212,35 +224,31 @@ if (existsSync(nusOverridesFile)) {
         if (typeof overrides === "object" && !Array.isArray(overrides)) {
             for (const [key, value] of Object.entries(overrides)) {
                 if (typeof value !== "string") {
-                    console.warn(`X Ignoring override '${key}',`
-                        + " value must be string")
+                    console.warn(`X Ignoring override '${
+                        key}', value must be string`)
                     continue
                 }
                 config.overrides[key] = value
             }
         } else if (overrides !== undefined) {
-            console.warn("X Ignoring config from 'nus.overrides.json', "
+            console.warn("X Ignoring 'nus.overrides.json' file, "
                 + "must be a flat string-string object")
         }
     } catch {
-        console.warn("X Ignoring 'nus.overrides.json' config, invalid JSON")
+        console.warn("X Ignoring 'nus.overrides.json' file, invalid JSON")
     }
 }
 let longestName = 20
-if (pack?.dependencies) {
-    for (const name of Object.keys(pack.dependencies)) {
-        longestName = Math.max(longestName, name.length)
-    }
+for (const name of Object.keys(pack.dependencies || {})) {
+    longestName = Math.max(longestName, name.length)
 }
-if (pack?.devDependencies) {
-    for (const name of Object.keys(pack.devDependencies)) {
-        longestName = Math.max(longestName, name.length)
-    }
+for (const name of Object.keys(pack.devDependencies || {})) {
+    longestName = Math.max(longestName, name.length)
 }
 /** @type {("dependencies"|"devDependencies")[]} */
 const depTypes = ["dependencies", "devDependencies"]
 for (const depType of depTypes) {
-    if (!pack || !pack[depType]) {
+    if (!pack[depType]) {
         continue
     }
     console.info(`= Updating ${depType} =`)
@@ -272,29 +280,51 @@ console.info(`= Installing =`)
 writeFileSync(packageJson, `${JSON.stringify(pack, null, config.indent)}\n`)
 rmSync(join(process.cwd(), "package-lock.json"), {"force": true})
 rmSync(join(process.cwd(), "node_modules"), {"force": true, "recursive": true})
-let args = " --no-fund"
-if (config.npm.force) {
-    args += " --force"
+let installArgs = ""
+let auditArgs = ""
+let dedupeArgs = ""
+if (config.tool === "npm") {
+    installArgs = " --no-fund"
+    auditArgs = " --no-fund"
+    dedupeArgs = " --no-fund"
 }
-if (config.npm.global) {
-    args += " --global"
+if (config.cli.force) {
+    installArgs += " --force"
 }
-if (config.npm.ignoreScripts) {
-    args += " --ignore-scripts"
+if (config.cli.global) {
+    installArgs += " --global"
+    auditArgs += " --global"
+    dedupeArgs = " --global"
 }
-if (config.npm.legacy) {
-    args += " --legacy-peer-deps"
+if (config.cli.ignoreScripts || config.tool === "npm") {
+    installArgs += " --ignore-scripts"
 }
-if (config.npm.silent) {
-    args += " --silent"
+if (config.cli.legacy) {
+    if (config.tool === "npm") {
+        installArgs += " --legacy-peer-deps"
+        dedupeArgs = " --legacy-peer-deps"
+    } else {
+        installArgs += " --strict-peer-dependencies=false"
+        dedupeArgs += " --strict-peer-dependencies=false"
+    }
 }
-if (config.npm.verbose) {
-    args += " --verbose"
+if (config.cli.silent) {
+    installArgs += " --loglevel=silent"
+    auditArgs += " --loglevel=silent"
+    dedupeArgs += " --loglevel=silent"
 }
-execSync(`npm install${args}`, {"encoding": "utf8", "stdio": "inherit"})
+if (config.cli.verbose) {
+    installArgs += " --loglevel=verbose"
+    auditArgs += " --loglevel=verbose"
+    dedupeArgs += " --loglevel=verbose"
+}
+execSync(`${config.tool} install${installArgs}`,
+    {"encoding": "utf8", "stdio": "inherit"})
 if (config.audit) {
-    execSync(`npm audit fix${args}`, {"encoding": "utf8", "stdio": "inherit"})
+    execSync(`${config.tool} audit fix${auditArgs}`,
+        {"encoding": "utf8", "stdio": "inherit"})
 }
-if (config.dedup) {
-    execSync(`npm dedup${args}`, {"encoding": "utf8", "stdio": "inherit"})
+if (config.dedupe) {
+    execSync(`${config.tool} dedupe${dedupeArgs}`,
+        {"encoding": "utf8", "stdio": "inherit"})
 }
