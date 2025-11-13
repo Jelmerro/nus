@@ -1,38 +1,39 @@
 {
     "name": "nus",
-    "productName": "Node/npm Update Script",
     "version": "0.1.0",
     "description": "A script to update all node/npm packages in a project",
+    "keywords": [
+        "Nodejs",
+        "Npm",
+        "Updater"
+    ],
+    "homepage": "https://github.com/Jelmerro/nus",
+    "repository": {
+        "url": "https://github.com/Jelmerro/nus",
+        "type": "git"
+    },
+    "funding": "https://github.com/sponsors/Jelmerro/",
+    "license": "MIT",
+    "author": "Jelmer van Arnhem",
     "type": "module",
     "exports": "./index.js",
     "bin": {
         "nus": "./index.js"
     },
     "scripts": {
-        "fix": "eslint --fix index.js",
+        "eslint": "eslint",
+        "fix": "eslint --fix",
         "lint": "npm run eslint && npm run tsc",
-        "eslint": "eslint index.js",
         "tsc": "tsc",
         "update": "npx -y jelmerro/nus"
     },
-    "repository": "https://github.com/Jelmerro/nus",
-    "keywords": [
-        "Nodejs",
-        "Npm",
-        "Updater"
-    ],
-    "author": "Jelmer van Arnhem",
-    "email": "Jelmerro@users.noreply.github.com",
-    "funding": "https://github.com/sponsors/Jelmerro/",
-    "license": "MIT",
     "dependencies": {
         "semver": "7.7.3"
     },
     "devDependencies": {
-        "@types/node": "24.10.0",
         "@types/semver": "7.7.1",
         "eslint-config": "github:Jelmerro/eslint-config",
-        "typescript": "5.9.3"
+        "type-config": "github:Jelmerro/type-config"
     },
     "engines": {
         "node": ">=16"

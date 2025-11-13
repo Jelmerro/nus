@@ -75,10 +75,12 @@ const findVersionType = (name, version) => {
 const findWantedVersion = ({
     alias, desired, name, paddedName, version, verType
 }) => {
-    /** @type {{
+    /**
+     * @type {{
      *   "dist-tags": {[name: string]: string|null},
      *   "versions": string[]
-     * }|null} */
+     * }|null}
+     */
     let info = null
     try {
         info = JSON.parse(execSync(`${config.tool} view ${
@@ -139,7 +141,7 @@ try {
     const packStr = readFileSync(packageJson, {"encoding": "utf8"}).toString()
     const line = packStr.split("\n").find(
         l => l.startsWith(" ") || l.startsWith("\t")) ?? ""
-    indent = line.search(/\S|$/) ?? 2
+    indent = line.search(/\S|$/) ?? indent
     if (line.startsWith("\t")) {
         indent = "\t"
     }
@@ -296,7 +298,7 @@ if (config.cli.global) {
     auditArgs += " --global"
     dedupeArgs = " --global"
 }
-if (config.cli.ignoreScripts || config.tool === "npm") {
+if (config.cli.ignoreScripts) {
     installArgs += " --ignore-scripts"
 }
 if (config.cli.legacy) {

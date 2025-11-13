@@ -30,7 +30,7 @@ Node/npm Update Script - A script to update all node/npm packages in a project.
 ```
 
 Then simply run `npm run update` to update everything.
-In short, this will find the right versions for each package in the `package.json`,
+In short, this will find the current versions for each package in the `package.json`,
 then change the versions in this file, delete `package-lock.json` and `node_modules`,
 finally install the packages from scratch based on the updated `package.json` file.
 The overrides are the main way to change package versions using nus if needed,
