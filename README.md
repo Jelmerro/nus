@@ -36,6 +36,14 @@ finally install the packages from scratch based on the updated `package.json` fi
 The overrides are the main way to change package versions using nus if needed,
 so see below for all information about configuring it using the config file.
 
+## Contribute
+
+You can support my work on [ko-fi](https://ko-fi.com/Jelmerro) or [Github sponsors](https://github.com/sponsors/Jelmerro).
+Another way to help is to report issues or suggest new features.
+Please try to follow the linter styling when developing, see `npm run lint`.
+For an example vimrc that can auto-format based on the included linters,
+you can check out my personal [vimrc](https://github.com/Jelmerro/vimrc).
+
 ### Output
 
 The nus CLI output is intended to be compact and to the point.
@@ -133,10 +141,3 @@ For example, `#1.0.0`, `#c1f134d` or `#master` are all valid, the `#` is optiona
 but you might want to list it with the `#` to be explicit about git package overrides.
 Unlike npm semver ranges and versions, these are not checked for validity before installing,
 so unlike invalid semver ranges, supplying an invalid git override will prevent `npm install` from working.
-
-## License
-
-nus was ported from an old python script I always copied and used to update with.
-I have licensed the original script under various licenses, either GPL3 or MIT.
-Since the current JS iteration is a complete rewrite, I decided to go plain MIT.
-You can see the LICENSE file for exact terms and conditions.
