@@ -74,6 +74,8 @@ export default {
     "dedupe": true,
     "cli": {
         "force": false,
+        "foregroundScripts": true,
+        "fundHide": true,
         "global": false,
         "ignoreScripts": false,
         "legacy": false,
@@ -92,6 +94,7 @@ The optional cli subkey is used for giving the respective options to npm or pnpm
 you can control which of these should be used with the `tool` config key.
 The current supported values for `tool` are: "npm", "npx pnpm" and "pnpm".
 For example, `legacy` will set `--legacy-peer-deps` for npm and `--strict-peer-dependencies=false` for pnpm.
+Npm's fund messages are by default hidden, while install scripts that run are made visible.
 
 ### Audit & Dedupe
 

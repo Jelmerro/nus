@@ -9,6 +9,8 @@ const config = {
     "audit": true,
     "cli": {
         "force": false,
+        "foregroundScripts": true,
+        "fundHide": true,
         "global": false,
         "ignoreScripts": false,
         "legacy": false,
@@ -171,21 +173,12 @@ if (existsSync(nusConfigFile)) {
                     tools.map(p => `'${p}'`).join(", ")}`)
             }
         }
-        /** @type {(keyof typeof config.cli)[]} */
-        const cliArgs = [
-            "force",
-            "global",
-            "ignoreScripts",
-            "legacy",
-            "silent",
-            "verbose"
-        ]
+        const cliArgs = Object.keys(config.cli)
         for (const cliArg of cliArgs) {
             if (typeof customConfig.cli?.[cliArg] === "boolean") {
                 config.cli[cliArg] = customConfig.cli[cliArg]
             } else if (customConfig.cli?.[cliArg] !== undefined) {
-                console.warn(`X Ignoring 'cli.${
-                    cliArg}', must be boolean`)
+                console.warn(`X Ignoring 'cli.${cliArg}', must be boolean`)
             }
         }
         /** @type {("audit"|"dedupe")[]} */
@@ -285,13 +278,16 @@ rmSync(join(process.cwd(), "node_modules"), {"force": true, "recursive": true})
 let installArgs = ""
 let auditArgs = ""
 let dedupeArgs = ""
-if (config.tool === "npm") {
-    installArgs = " --no-fund"
-    auditArgs = " --no-fund"
-    dedupeArgs = " --no-fund"
-}
 if (config.cli.force) {
     installArgs += " --force"
+}
+if (config.tool === "npm" && config.cli.foregroundScripts) {
+    installArgs += " --foreground-scripts"
+}
+if (config.tool === "npm" && config.cli.fundHide) {
+    installArgs += " --no-fund"
+    auditArgs += " --no-fund"
+    dedupeArgs += " --no-fund"
 }
 if (config.cli.global) {
     installArgs += " --global"
