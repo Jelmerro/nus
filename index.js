@@ -21,7 +21,7 @@ const config = {
     /** @type {{[name: string]: string}} */
     "overrides": {},
     "prefixChar": "",
-    /** @type {"npm"|"npx pnpm"|"pnpm"} */
+    /** @type {"npm"|"npx pnpm"|"pnpm"|"npx bun"|"bun"} */
     "tool": "npm"
 }
 
@@ -85,8 +85,17 @@ const findWantedVersion = ({
      */
     let info = null
     try {
-        info = JSON.parse(execSync(`${config.tool} view ${
-            alias ?? name} --json versions dist-tags`, {"encoding": "utf8"}))
+        if (config.tool.endsWith("bun")) {
+            info = {
+                "dist-tags": JSON.parse(execSync(`${config.tool} info ${alias
+                    ?? name} --json dist-tags`, {"encoding": "utf8"})),
+                "versions": JSON.parse(execSync(`${config.tool} info ${alias
+                    ?? name} --json versions`, {"encoding": "utf8"}))
+            }
+        } else {
+            info = JSON.parse(execSync(`${config.tool} view ${alias
+                ?? name} --json versions dist-tags`, {"encoding": "utf8"}))
+        }
     } catch {
         // Can't update package without this info, next if will be entered.
     }
@@ -165,7 +174,7 @@ if (existsSync(nusConfigFile)) {
     }
     if (customConfig) {
         if (customConfig.tool !== undefined) {
-            const tools = ["npm", "npx pnpm", "pnpm"]
+            const tools = ["npm", "npx pnpm", "pnpm", "npx bun", "bun"]
             if (tools.includes(customConfig.tool)) {
                 config.tool = customConfig.tool
             } else {
@@ -274,6 +283,8 @@ for (const depType of depTypes) {
 console.info(`= Installing =`)
 writeFileSync(packageJson, `${JSON.stringify(pack, null, indent)}\n`)
 rmSync(join(process.cwd(), "package-lock.json"), {"force": true})
+rmSync(join(process.cwd(), "pnpm-lock.yaml"), {"force": true})
+rmSync(join(process.cwd(), "bun.lock"), {"force": true})
 rmSync(join(process.cwd(), "node_modules"), {"force": true, "recursive": true})
 let installArgs = ""
 let auditArgs = ""
@@ -322,7 +333,7 @@ if (config.audit) {
     execSync(`${config.tool} audit fix${auditArgs}`,
         {"encoding": "utf8", "stdio": "inherit"})
 }
-if (config.dedupe) {
+if (config.dedupe && !config.tool.endsWith("bun")) {
     execSync(`${config.tool} dedupe${dedupeArgs}`,
         {"encoding": "utf8", "stdio": "inherit"})
 }

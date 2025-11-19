@@ -9,7 +9,8 @@ Node/npm Update Script - A script to update all node/npm packages in a project.
 - Always do a clean install to update nested dependencies too
 - Specify custom versions to use by tag, range or version (default is latest)
 - Single command to update, install, audit and finally dedupe
-- Custom save-prefix, npm install options (force/legacy-peer-deps) or use pnpm
+- Custom options for save-prefix, cli options (force/legacy-peer-deps) and more
+- Built for npm first, there's also support for pnpm and bun, either global or via npx
 - Exact versions in package.json to avoid confusion and surprises
 - Clean CLI output: name, old version, new version & update policy (in brackets)
 
@@ -31,7 +32,7 @@ Node/npm Update Script - A script to update all node/npm packages in a project.
 
 Then simply run `npm run update` to update everything.
 In short, this will find the current versions for each package in the `package.json`,
-then change the versions in this file, delete `package-lock.json` and `node_modules`,
+then change the versions in this file, delete various lock files and `node_modules`,
 finally install the packages from scratch based on the updated `package.json` file.
 The overrides are the main way to change package versions using nus if needed,
 so see below for all information about configuring it using the config file.
@@ -90,11 +91,11 @@ export default {
 
 ### Tool & CLI
 
-The optional cli subkey is used for giving the respective options to npm or pnpm commands,
-you can control which of these should be used with the `tool` config key.
-The current supported values for `tool` are: "npm", "npx pnpm" and "pnpm".
+The optional cli subkey is used for giving the respective options to npm, pnpm or bun commands.
 For example, `legacy` will set `--legacy-peer-deps` for npm and `--strict-peer-dependencies=false` for pnpm.
 Npm's fund messages are by default hidden, while install scripts that run are made visible.
+The current supported values for `tool` are: "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
+Since lock files are deleted during updates, nus is also convenient for switching between tools.
 
 ### Audit & Dedupe
 
