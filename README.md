@@ -45,7 +45,7 @@ Please try to follow the linter styling when developing, see `npm run lint`.
 For an example vimrc that can auto-format based on the included linters,
 you can check out my personal [vimrc](https://github.com/Jelmerro/vimrc).
 
-### Output
+## Output
 
 The nus CLI output is intended to be compact and to the point.
 The legend of the output can be summarized as follows:
