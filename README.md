@@ -9,10 +9,11 @@ Node/npm Update Script - A script to update all node/npm packages in a project.
 - Always do a clean install to update nested dependencies too
 - Specify custom versions to use by tag, range or version (default is latest)
 - Single command to update, install, audit and finally dedupe
-- Custom options for save-prefix, cli options (force/legacy-peer-deps) and more
+- Optionally set a minAge to prevent very recent releases from being used
+- Custom options for cli: force, ignore-scripts, legacy-peer-deps and more
 - Built for npm first, there's also support for pnpm and bun, either global or via npx
 - Exact versions in package.json to avoid confusion and surprises
-- Clean CLI output: name, old version, new version & update policy (in brackets)
+- Clean CLI output: name, old version, new version, update policy, latest, see below
 
 ## Usage
 
@@ -50,13 +51,14 @@ you can check out my personal [vimrc](https://github.com/Jelmerro/vimrc).
 The nus CLI output is intended to be compact and to the point.
 The legend of the output can be summarized as follows:
 
-- Each dependency takes up one line that includes the name and current version
+- Each dependency takes up one line that includes the name and current/old version
 - For updated packages, the old and new version are listed separated by `>`
     - The line will be prefixed with `> ` instead of just spaces so it can be easily spotted
-- For overridden packages, the override policy is listed between brackets
-    - The policy and latest version are both listed separated by `~` if conflicting
+- For overridden packages, the override policy is prefixed by `@`
+    - The policy and latest version are both listed if conflicting, latest prefixed by `~`
     - The line will be prefixed with `~ ` too if the package was not updated due to the policy
-- For git, url or file packages which are not transparent about changes a `- ` is prefixed
+- For too new packages, blocked by the minAge option, a `!` is used as the prefix
+- For git, url or file packages which are not transparent about changes a neutral `- ` is prefixed
 - Any errors are prefixed with `X `, this can be network or config errors
 
 In short, only the lines that do not start with merely spaces are of interest (because of changes).
@@ -83,8 +85,8 @@ export default {
         "silent": false,
         "verbose": false
     },
+    "minAge": 0,
     "overrides": {},
-    "prefixChar": "",
     "tool": "npm
 }
 ```
@@ -103,13 +105,14 @@ The npm/pnpm subcommand that is always run is `install`,
 but by default `audit fix` and `dedupe` are also run to keep the output secure and small.
 You can control/disable this with the toplevel `audit` and `dedupe` options.
 
-### PrefixChar
+### MinAge
 
-You can also change the prefixChar option to add a char in front of versions,
-such as "~" for only patch upgrades and "^" for any non-major ones.
-This character is added only to the package.json, mostly as a suggestion,
-as you should rarely if ever run a plain `npm i` instead of `npm ci`,
-hence why by default it is left empty to specify the exact version.
+This controls the minimal age that packages should have to be considered.
+As such, this options works exactly like [pnpm's minimumReleaseAge option](https://pnpm.io/settings#minimumreleaseage).
+It is recommended to keep the value of these options in sync, both are defined in minutes.
+In case all more recent versions of a package are too new for the minAge,
+an error is shown and the current version will remain in place without change.
+If there is an in-between version that is newer but still old enough, it will be updated to.
 
 ### Overrides
 

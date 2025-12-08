@@ -3,6 +3,7 @@
 import {execSync} from "node:child_process"
 import {existsSync, readFileSync, rmSync, writeFileSync} from "node:fs"
 import {join} from "node:path"
+import lt from "semver/functions/lt.js"
 import maxSatisfying from "semver/ranges/max-satisfying.js"
 
 const config = {
@@ -18,9 +19,9 @@ const config = {
         "verbose": false
     },
     "dedupe": true,
+    "minAge": 0,
     /** @type {{[name: string]: string}} */
     "overrides": {},
-    "prefixChar": "",
     /** @type {"npm"|"npx pnpm"|"pnpm"|"npx bun"|"bun"} */
     "tool": "npm"
 }
@@ -80,7 +81,7 @@ const findWantedVersion = ({
     /**
      * @type {{
      *   "dist-tags": {[name: string]: string|null},
-     *   "versions": string[]
+     *   "time": {[version: string]: string|null},
      * }|null}
      */
     let info = null
@@ -92,59 +93,77 @@ const findWantedVersion = ({
         }
         if (config.tool.endsWith("bun")) {
             const distCmd = `${config.tool} info ${pkg} --json dist-tags`
-            const versionCmd = `${config.tool} info ${pkg} --json versions`
+            const timeCmd = `${config.tool} info ${pkg} --json time`
             info = {
                 "dist-tags": JSON.parse(execSync(distCmd, cmdOpts).toString()),
-                "versions": JSON.parse(execSync(versionCmd, cmdOpts).toString())
+                "time": JSON.parse(execSync(timeCmd, cmdOpts).toString())
             }
         } else {
-            const cmd = `${config.tool} view ${pkg} --json versions dist-tags`
+            const cmd = `${config.tool} view ${pkg} --json time dist-tags`
             info = JSON.parse(execSync(cmd, cmdOpts).toString())
         }
     } catch {
         // Can't update package without this info, next if will be entered.
     }
-    if (!info?.["dist-tags"] || !info?.versions) {
-        console.info(`X ${paddedName}${version} (${desired})`)
-        console.warn(`X Failed, ${config.tool} request for ${
-            name} gave invalid info, sticking to ${version}`)
+    if (!info?.["dist-tags"] || !info?.time) {
+        console.info(`X ${paddedName}${version} @${desired}`)
+        console.warn(`X Failed, ${config.tool} request error`)
         return null
     }
-    let {latest} = info["dist-tags"]
-    if (desired === "latest" && config.prefixChar) {
-        latest = config.prefixChar + latest
+    const allVersions = Object.keys(info.time)
+        .filter(v => v !== "modified" && v !== "created")
+    const minAge = Date.now() - config.minAge * 1000 * 60
+    const allowedVersions = allVersions.filter(v => {
+        const releaseTime = info.time[v]
+        if (!releaseTime) {
+            return false
+        }
+        return new Date(releaseTime).getTime() <= minAge
+    })
+    let wanted = null
+    let newest = null
+    if (info["dist-tags"][desired]) {
+        wanted = findByRange(allowedVersions, `<=${info["dist-tags"][desired]}`)
+        newest = findByRange(allVersions, `<=${info["dist-tags"][desired]}`)
+    } else {
+        wanted = findByRange(allowedVersions, desired)
+        newest = findByRange(allVersions, desired)
     }
-    let wanted = latest
-    if (desired !== "latest") {
-        wanted = info["dist-tags"][desired]
-            ?? findByRange(info.versions, desired)
+    if (newest && wanted !== newest && (!wanted || lt(wanted, version))) {
+        console.info(`X ${paddedName}${version} @${desired} !${newest}`)
+        console.warn(`X Failed, current and more recent versions too new`)
+        return null
     }
-    if (!wanted || !latest) {
-        console.info(`X ${paddedName}${version} (${desired})`)
-        console.warn(`X Failed, no ${desired} version for ${
-            name}, sticking to ${version}`)
+    if (!wanted) {
+        console.info(`X ${paddedName}${version} @${desired}`)
+        console.warn(`X Failed, no ${desired} version found`)
         return null
     }
     if (verType === "alias") {
         wanted = `npm:${alias}@${wanted}`
     }
-    let desiredMsg = ""
+    let policy = ""
+    let status = "  "
+    let tooNew = ""
+    if (wanted !== newest) {
+        tooNew = ` !${newest}`
+        status = "! "
+    }
     if (desired !== "latest") {
+        status = "~ "
+        const {latest} = info["dist-tags"]
         if (desired === latest) {
-            desiredMsg = ` (${desired})`
+            policy = ` @${desired}`
         } else {
-            desiredMsg = ` (${desired} ~ ${latest})`
+            policy = ` @${desired} ~${latest}`
         }
     }
-    if (wanted === version) {
-        if (desiredMsg && desired !== latest) {
-            console.info(`~ ${paddedName}${version}${desiredMsg}`)
-        } else {
-            console.info(`  ${paddedName}${version}${desiredMsg}`)
-        }
-    } else {
-        console.info(`> ${paddedName}${version} > ${wanted}${desiredMsg}`)
+    let update = ""
+    if (wanted !== version) {
+        status = "> "
+        update = ` > ${wanted}`
     }
+    console.info(`${status}${paddedName}${version}${update}${policy}${tooNew}`)
     return wanted
 }
 
@@ -187,6 +206,13 @@ if (existsSync(nusConfigFile)) {
                     tools.map(p => `'${p}'`).join(", ")}`)
             }
         }
+        if (customConfig.minAge !== undefined) {
+            if (typeof customConfig.minAge === "number") {
+                config.minAge = Math.max(customConfig.minAge, 0)
+            } else {
+                console.warn("X Ignoring 'minAge', must be number")
+            }
+        }
         const cliArgs = Object.keys(config.cli)
         for (const cliArg of cliArgs) {
             if (typeof customConfig.cli?.[cliArg] === "boolean") {
@@ -203,13 +229,6 @@ if (existsSync(nusConfigFile)) {
             } else if (customConfig[arg] !== undefined) {
                 console.warn(`X Ignoring '${arg}', must be boolean`)
             }
-        }
-        const validPrefixes = ["", "<", ">", "<=", ">=", "=", "~", "^"]
-        if (validPrefixes.includes(customConfig.prefixChar)) {
-            config.prefixChar = customConfig.prefixChar
-        } else if (customConfig.prefixChar !== undefined) {
-            console.warn(`X Ignoring 'prefixChar', must be: ${
-                validPrefixes.map(p => `'${p}'`).join(", ")}`)
         }
         if (typeof customConfig.overrides === "object") {
             for (const [key, value] of Object.entries(customConfig.overrides)) {
