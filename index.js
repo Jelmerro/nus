@@ -245,27 +245,6 @@ if (existsSync(nusConfigFile)) {
         }
     }
 }
-const nusOverridesFile = join(process.cwd(), "nus.overrides.json")
-if (existsSync(nusOverridesFile)) {
-    try {
-        const overrides = JSON.parse(readFileSync(nusOverridesFile).toString())
-        if (typeof overrides === "object" && !Array.isArray(overrides)) {
-            for (const [key, value] of Object.entries(overrides)) {
-                if (typeof value !== "string") {
-                    console.warn(`X Ignoring override '${
-                        key}', value must be string`)
-                    continue
-                }
-                config.overrides[key] = value
-            }
-        } else if (overrides !== undefined) {
-            console.warn("X Ignoring 'nus.overrides.json' file, "
-                + "must be a flat string-string object")
-        }
-    } catch {
-        console.warn("X Ignoring 'nus.overrides.json' file, invalid JSON")
-    }
-}
 let longestName = 20
 for (const name of Object.keys(pack.dependencies || {})) {
     longestName = Math.max(longestName, name.length)

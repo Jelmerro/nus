@@ -120,22 +120,18 @@ Inside the `nus.config.js` file you can specify a string-string object of versio
 This object is used to change specific packages from using a different version than latest.
 This can be done by listing an exact version, a dist-tag or a semver range.
 For example, to use the latest beta tag of package `package-a`,
-as well as the newest v5.x.x major release of `package-b` (but not 6.0.0 or newer),
-you should use an overrides section like so:
+as well as the newest v5.x.x major release of `package-b` (but not 6.0.0 or newer):
 
-```json
-{
-    "package-a": "beta",
-    "package-b": "^5"
+```js
+export default {
+    "overrides": {
+        "package-a": "beta",
+        "package-b": "^5"
+    }
 }
 ```
 
 You can also list versions directly, but tags and [semver ranges](https://github.com/npm/node-semver#ranges) are recommended.
-If you only want to change the overrides and not any config,
-you can also use `nus.overrides.json` in the root of your project.
-This file does not support any other config, but just the overrides object like above.
-You are free to have both a config and an overrides file,
-but if you have the same package name in both files the overrides file has priority.
 Direct source urls (such as those starting with `http:`/`https:`) or file dependencies are always skipped.
 Aliased packages, such as `"custom-package": "npm:package@version"`, are by default updated to latest,
 even if `package` is overridden, but can be overridden separately by using the `custom-package` name instead.
