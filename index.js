@@ -25,6 +25,7 @@ const config = {
         "peer": false,
         "prod": true
     },
+    "install": true,
     "minAge": 0,
     /** @type {{[name: string]: string}} */
     "overrides": {},
@@ -237,8 +238,8 @@ if (existsSync(nusConfigFile)) {
                 console.warn(`X Ignoring 'cli.${cliArg}', must be boolean`)
             }
         }
-        /** @type {("audit"|"dedupe")[]} */
-        const boolOpts = ["audit", "dedupe"]
+        /** @type {("audit"|"dedupe"|"install")[]} */
+        const boolOpts = ["audit", "dedupe", "install"]
         for (const arg of boolOpts) {
             if (typeof customConfig[arg] === "boolean") {
                 config[arg] = customConfig[arg]
@@ -308,12 +309,17 @@ for (const depType of depTypes) {
         }
     }
 }
-console.info(`= Installing =`)
+if (config.install) {
+    console.info(`= Installing =`)
+}
 writeFileSync(packageJson, `${JSON.stringify(pack, null, indent)}\n`)
 rmSync(join(process.cwd(), "package-lock.json"), {"force": true})
 rmSync(join(process.cwd(), "pnpm-lock.yaml"), {"force": true})
 rmSync(join(process.cwd(), "bun.lock"), {"force": true})
 rmSync(join(process.cwd(), "node_modules"), {"force": true, "recursive": true})
+if (!config.install) {
+    process.exit(0)
+}
 let installArgs = ""
 let auditArgs = ""
 let dedupeArgs = ""

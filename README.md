@@ -91,6 +91,7 @@ export default {
         "peer": false,
         "prod": true
     },
+    "install": true,
     "minAge": 0,
     "overrides": {},
     "tool": "npm
@@ -105,11 +106,13 @@ Npm's fund messages are by default hidden, while install scripts that run are ma
 The current supported values for `tool` are: "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
 Since lock files are deleted during updates, nus is also convenient for switching between tools.
 
-### Audit & Dedupe
+### Audit & Dedupe & Install
 
-The npm/pnpm subcommand that is always run is `install`,
+The npm/pnpm subcommand that is first run is `install`,
 but by default `audit fix` and `dedupe` are also run to keep the output secure and small.
-You can control/disable this with the toplevel `audit` and `dedupe` options.
+You can control/disable this with the toplevel `audit`, `dedupe` and `install` options.
+If `install` is disabled, `audit` and `dedupe` are ignored and no installation is performed.
+Old `node_modules` and lock files are always completely cleared regardless of these options.
 
 ### Deps
 
