@@ -19,6 +19,12 @@ const config = {
         "verbose": false
     },
     "dedupe": true,
+    "deps": {
+        "dev": true,
+        "optional": false,
+        "peer": false,
+        "prod": true
+    },
     "minAge": 0,
     /** @type {{[name: string]: string}} */
     "overrides": {},
@@ -168,7 +174,15 @@ const findWantedVersion = ({
 }
 
 const packageJson = join(process.cwd(), "package.json")
-/** @type {import('./package.json')|null} */
+/**
+ * @type {(
+ *     import('./package.json')
+ *     & {"dependencies": {[name: string]: string}}
+ *     & {"devDependencies": {[name: string]: string}}
+ *     & {"optionalDependencies": {[name: string]: string}}
+ *     & {"peerDependencies": {[name: string]: string}}
+ * )|null}
+ */
 let pack = null
 /** @type {number|"\t"} */
 let indent = 2
@@ -206,6 +220,13 @@ if (existsSync(nusConfigFile)) {
                     tools.map(p => `'${p}'`).join(", ")}`)
             }
         }
+        for (const depType of Object.keys(config.deps)) {
+            if (typeof customConfig.deps?.[depType] === "boolean") {
+                config.deps[depType] = customConfig.deps[depType]
+            } else if (customConfig.deps?.[depType] !== undefined) {
+                console.warn(`X Ignoring 'deps.${depType}', must be boolean`)
+            }
+        }
         if (customConfig.minAge !== undefined) {
             if (typeof customConfig.minAge === "number") {
                 config.minAge = Math.max(customConfig.minAge, 0)
@@ -213,8 +234,7 @@ if (existsSync(nusConfigFile)) {
                 console.warn("X Ignoring 'minAge', must be number")
             }
         }
-        const cliArgs = Object.keys(config.cli)
-        for (const cliArg of cliArgs) {
+        for (const cliArg of Object.keys(config.cli)) {
             if (typeof customConfig.cli?.[cliArg] === "boolean") {
                 config.cli[cliArg] = customConfig.cli[cliArg]
             } else if (customConfig.cli?.[cliArg] !== undefined) {
@@ -245,15 +265,26 @@ if (existsSync(nusConfigFile)) {
         }
     }
 }
+/**
+ * @type {{[name: string]: "dependencies"|"devDependencies"
+ *     |"peerDependencies"|"optionalDependencies"}}
+ */
+const depNameTranslateObj = {
+    "dev": "devDependencies",
+    "optional": "optionalDependencies",
+    "peer": "peerDependencies",
+    "prod": "dependencies"
+}
+const depTypes = Object.keys(config.deps).filter(d => config.deps[d])
+    .map(d => depNameTranslateObj[d])
 let longestName = 20
-for (const name of Object.keys(pack.dependencies || {})) {
-    longestName = Math.max(longestName, name.length)
+for (const depType of depTypes) {
+    if (pack[depType]) {
+        for (const name of Object.keys(pack[depType])) {
+            longestName = Math.max(longestName, name.length)
+        }
+    }
 }
-for (const name of Object.keys(pack.devDependencies || {})) {
-    longestName = Math.max(longestName, name.length)
-}
-/** @type {("dependencies"|"devDependencies")[]} */
-const depTypes = ["dependencies", "devDependencies"]
 for (const depType of depTypes) {
     if (!pack[depType]) {
         continue
@@ -269,7 +300,6 @@ for (const depType of depTypes) {
                 console.info(`- ${paddedName}${verType}`)
             } else {
                 console.info(`- ${paddedName}git#${hash}`)
-                // @ts-expect-error Indexing does not take depType into account
                 pack[depType][name] = `${version.split("#")[0]}#${hash}`
             }
         } else {
@@ -277,7 +307,6 @@ for (const depType of depTypes) {
                 alias, desired, name, paddedName, version, verType
             })
             if (wanted) {
-                // @ts-expect-error Indexing does not take depType into account
                 pack[depType][name] = wanted
             }
         }

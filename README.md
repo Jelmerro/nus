@@ -74,7 +74,6 @@ A basic config (using all default settings) can look like this:
 ```js
 export default {
     "audit": true,
-    "dedupe": true,
     "cli": {
         "force": false,
         "foregroundScripts": true,
@@ -84,6 +83,13 @@ export default {
         "legacy": false,
         "silent": false,
         "verbose": false
+    },
+    "dedupe": true,
+    "deps": {
+        "dev": true,
+        "optional": false,
+        "peer": false,
+        "prod": true
     },
     "minAge": 0,
     "overrides": {},
@@ -104,6 +110,11 @@ Since lock files are deleted during updates, nus is also convenient for switchin
 The npm/pnpm subcommand that is always run is `install`,
 but by default `audit fix` and `dedupe` are also run to keep the output secure and small.
 You can control/disable this with the toplevel `audit` and `dedupe` options.
+
+### Deps
+
+With the keys in this object you can control which type of dependencies should be updated.
+By default, only dev and regular/prod dependencies are updated, but peer and optional are also supported.
 
 ### MinAge
 
