@@ -85,16 +85,21 @@ const findWantedVersion = ({
      */
     let info = null
     try {
+        const pkg = alias ?? name
+        /** @type {import("node:child_process").ExecSyncOptions} */
+        const cmdOpts = {
+            "encoding": "utf8", "stdio": ["ignore", "pipe", "ignore"]
+        }
         if (config.tool.endsWith("bun")) {
+            const distCmd = `${config.tool} info ${pkg} --json dist-tags`
+            const versionCmd = `${config.tool} info ${pkg} --json versions`
             info = {
-                "dist-tags": JSON.parse(execSync(`${config.tool} info ${alias
-                    ?? name} --json dist-tags`, {"encoding": "utf8"})),
-                "versions": JSON.parse(execSync(`${config.tool} info ${alias
-                    ?? name} --json versions`, {"encoding": "utf8"}))
+                "dist-tags": JSON.parse(execSync(distCmd, cmdOpts).toString()),
+                "versions": JSON.parse(execSync(versionCmd, cmdOpts).toString())
             }
         } else {
-            info = JSON.parse(execSync(`${config.tool} view ${alias
-                ?? name} --json versions dist-tags`, {"encoding": "utf8"}))
+            const cmd = `${config.tool} view ${pkg} --json versions dist-tags`
+            info = JSON.parse(execSync(cmd, cmdOpts).toString())
         }
     } catch {
         // Can't update package without this info, next if will be entered.

@@ -8,6 +8,7 @@
         "Updater"
     ],
     "homepage": "https://github.com/Jelmerro/nus",
+    "bugs": "https://github.com/Jelmerro/nus/issues/",
     "repository": {
         "url": "https://github.com/Jelmerro/nus",
         "type": "git"
