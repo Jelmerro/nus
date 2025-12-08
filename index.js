@@ -71,26 +71,14 @@ const findVersionType = (name, version) => {
 }
 
 /**
- * Find the wanted version for a given package based on desired version string.
- * @param {{
- *   alias?: string|null,
- *   desired: string,
- *   name: string,
- *   paddedName: string,
- *   verType: "alias"|"semver",
- *   version: string,
- * }} opts
+ * Fetch the required version information using the configured tool.
+ * @param {{alias: string|null, name: string}} opts
+ * @returns {{
+ *   "dist-tags": {[name: string]: string|null},
+ *   "time": {[version: string]: string|null},
+ * }|null}
  */
-const findWantedVersion = ({
-    alias, desired, name, paddedName, version, verType
-}) => {
-    /**
-     * @type {{
-     *   "dist-tags": {[name: string]: string|null},
-     *   "time": {[version: string]: string|null},
-     * }|null}
-     */
-    let info = null
+const fetchVersionInfo = ({alias, name}) => {
     try {
         const pkg = alias ?? name
         /** @type {import("node:child_process").ExecSyncOptions} */
@@ -100,17 +88,30 @@ const findWantedVersion = ({
         if (config.tool.endsWith("bun")) {
             const distCmd = `${config.tool} info ${pkg} --json dist-tags`
             const timeCmd = `${config.tool} info ${pkg} --json time`
-            info = {
+            return {
                 "dist-tags": JSON.parse(execSync(distCmd, cmdOpts).toString()),
                 "time": JSON.parse(execSync(timeCmd, cmdOpts).toString())
             }
-        } else {
-            const cmd = `${config.tool} view ${pkg} --json time dist-tags`
-            info = JSON.parse(execSync(cmd, cmdOpts).toString())
         }
+        const cmd = `${config.tool} view ${pkg} --json time dist-tags`
+        return JSON.parse(execSync(cmd, cmdOpts).toString())
     } catch {
-        // Can't update package without this info, next if will be entered.
+        return null
     }
+}
+
+/**
+ * Find the wanted version for a given package based on desired version string.
+ * @param {{
+ *   alias?: string|null,
+ *   desired: string,
+ *   name: string,
+ *   paddedName: string,
+ *   version: string,
+ * }} opts
+ */
+const findWantedVersion = ({alias, desired, name, paddedName, version}) => {
+    const info = fetchVersionInfo({"alias": alias ?? null, name})
     if (!info?.["dist-tags"] || !info?.time) {
         console.info(`X ${paddedName}${version} @${desired}`)
         console.warn(`X Failed, ${config.tool} request error`)
@@ -126,15 +127,12 @@ const findWantedVersion = ({
         }
         return new Date(releaseTime).getTime() <= minAge
     })
-    let wanted = null
-    let newest = null
+    let desiredRange = desired
     if (info["dist-tags"][desired]) {
-        wanted = findByRange(allowedVersions, `<=${info["dist-tags"][desired]}`)
-        newest = findByRange(allVersions, `<=${info["dist-tags"][desired]}`)
-    } else {
-        wanted = findByRange(allowedVersions, desired)
-        newest = findByRange(allVersions, desired)
+        desiredRange = `<=${info["dist-tags"][desired]}`
     }
+    const wanted = findByRange(allowedVersions, desiredRange)
+    const newest = findByRange(allVersions, desiredRange)
     if (newest && wanted !== newest && (!wanted || lt(wanted, version))) {
         console.info(`X ${paddedName}${version} @${desired} !${newest}`)
         console.warn(`X Failed, current and more recent versions too new`)
@@ -145,23 +143,18 @@ const findWantedVersion = ({
         console.warn(`X Failed, no ${desired} version found`)
         return null
     }
-    if (verType === "alias") {
-        wanted = `npm:${alias}@${wanted}`
-    }
-    let policy = ""
     let status = "  "
+    let policy = ""
     let tooNew = ""
     if (wanted !== newest) {
-        tooNew = ` !${newest}`
         status = "! "
+        tooNew = ` !${newest}`
     }
     if (desired !== "latest") {
         status = "~ "
-        const {latest} = info["dist-tags"]
-        if (desired === latest) {
-            policy = ` @${desired}`
-        } else {
-            policy = ` @${desired} ~${latest}`
+        policy = ` @${desired}`
+        if (desired !== info["dist-tags"].latest) {
+            policy += ` ~${info["dist-tags"].latest}`
         }
     }
     let update = ""
@@ -170,6 +163,9 @@ const findWantedVersion = ({
         update = ` > ${wanted}`
     }
     console.info(`${status}${paddedName}${version}${update}${policy}${tooNew}`)
+    if (alias) {
+        return `npm:${alias}@${wanted}`
+    }
     return wanted
 }
 
@@ -304,7 +300,7 @@ for (const depType of depTypes) {
             }
         } else {
             const wanted = findWantedVersion({
-                alias, desired, name, paddedName, version, verType
+                alias, desired, name, paddedName, version
             })
             if (wanted) {
                 pack[depType][name] = wanted
