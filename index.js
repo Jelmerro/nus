@@ -7,6 +7,7 @@ import lt from "semver/functions/lt.js"
 import maxSatisfying from "semver/ranges/max-satisfying.js"
 
 const config = {
+    /** @type {boolean|"prod"} */
     "audit": true,
     "cli": {
         "force": false,
@@ -15,8 +16,8 @@ const config = {
         "global": false,
         "ignoreScripts": false,
         "legacy": false,
-        "silent": false,
-        "verbose": false
+        /** @type {"silent"|"error"|"warn"|"notice"|"info"|"verbose"|"silly"} */
+        "loglevel": "notice"
     },
     "dedupe": true,
     "deps": {
@@ -25,6 +26,7 @@ const config = {
         "peer": false,
         "prod": true
     },
+    /** @type {boolean|"prod"} */
     "install": true,
     "minAge": 0,
     /** @type {{[name: string]: string}} */
@@ -232,7 +234,23 @@ if (existsSync(nusConfigFile)) {
             }
         }
         for (const cliArg of Object.keys(config.cli)) {
-            if (typeof customConfig.cli?.[cliArg] === "boolean") {
+            if (cliArg === "loglevel") {
+                const loglevels = [
+                    "silent",
+                    "error",
+                    "warn",
+                    "notice",
+                    "info",
+                    "verbose",
+                    "silly"
+                ]
+                if (loglevels.includes(customConfig.cli?.[cliArg])) {
+                    config.cli[cliArg] = customConfig.cli[cliArg]
+                } else if (customConfig.cli?.[cliArg] !== undefined) {
+                    console.warn(`X Ignoring 'cli.${cliArg}', must be one of:`
+                        + ` ${loglevels.join(", ")}`)
+                }
+            } else if (typeof customConfig.cli?.[cliArg] === "boolean") {
                 config.cli[cliArg] = customConfig.cli[cliArg]
             } else if (customConfig.cli?.[cliArg] !== undefined) {
                 console.warn(`X Ignoring 'cli.${cliArg}', must be boolean`)
@@ -243,8 +261,14 @@ if (existsSync(nusConfigFile)) {
         for (const arg of boolOpts) {
             if (typeof customConfig[arg] === "boolean") {
                 config[arg] = customConfig[arg]
+            } else if (arg === "dedupe") {
+                if (customConfig[arg] !== undefined) {
+                    console.warn(`X Ignoring '${arg}', must be boolean`)
+                }
+            } else if (customConfig[arg] === "prod") {
+                config[arg] = "prod"
             } else if (customConfig[arg] !== undefined) {
-                console.warn(`X Ignoring '${arg}', must be boolean`)
+                console.warn(`X Ignoring '${arg}', must be boolean or "prod"`)
             }
         }
         if (typeof customConfig.overrides === "object") {
@@ -323,6 +347,13 @@ if (!config.install) {
 let installArgs = ""
 let auditArgs = ""
 let dedupeArgs = ""
+if (config.install === "prod") {
+    installArgs += " --omit=dev"
+}
+if (config.install === "prod" || config.audit === "prod") {
+    auditArgs += " --omit=dev"
+    dedupeArgs += " --omit=dev"
+}
 if (config.cli.force) {
     installArgs += " --force"
 }
@@ -351,15 +382,10 @@ if (config.cli.legacy) {
         dedupeArgs += " --strict-peer-dependencies=false"
     }
 }
-if (config.cli.silent) {
-    installArgs += " --loglevel=silent"
-    auditArgs += " --loglevel=silent"
-    dedupeArgs += " --loglevel=silent"
-}
-if (config.cli.verbose) {
-    installArgs += " --loglevel=verbose"
-    auditArgs += " --loglevel=verbose"
-    dedupeArgs += " --loglevel=verbose"
+if (config.cli.loglevel !== "notice") {
+    installArgs += ` --loglevel=${config.cli.loglevel}`
+    auditArgs += ` --loglevel=${config.cli.loglevel}`
+    dedupeArgs += ` --loglevel=${config.cli.loglevel}`
 }
 execSync(`${config.tool} install${installArgs}`,
     {"encoding": "utf8", "stdio": "inherit"})

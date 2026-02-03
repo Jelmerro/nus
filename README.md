@@ -81,8 +81,7 @@ export default {
         "global": false,
         "ignoreScripts": false,
         "legacy": false,
-        "silent": false,
-        "verbose": false
+        "loglevel": "notice"
     },
     "dedupe": true,
     "deps": {
@@ -105,6 +104,8 @@ For example, `legacy` will set `--legacy-peer-deps` for npm and `--strict-peer-d
 Npm's fund messages are by default hidden, while install scripts that run are made visible.
 The current supported values for `tool` are: "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
 Since lock files are deleted during updates, nus is also convenient for switching between tools.
+For most CLI flags, you can use an `.npmrc`, which is also read by pnpm and bun,
+unless you only want to set it for running the updates and not by default.
 
 ### Audit & Dedupe & Install
 
@@ -113,11 +114,17 @@ but by default `audit fix` and `dedupe` are also run to keep the output secure a
 You can control/disable this with the toplevel `audit`, `dedupe` and `install` options.
 If `install` is disabled, `audit` and `dedupe` are ignored and no installation is performed.
 Old `node_modules` and lock files are always completely cleared regardless of these options.
+For `audit` and `install` you can also change it to `"prod"` to only install or audit those.
+Unlike npm's default behavior, if you only install production dependencies,
+nus will not magically install them when running the audit, but only audit `"prod"`.
+Hence setting `install` to `"prod"` will prevent you from auditing dev dependencies,
+similar to how setting `install` to `false` will abort early and not run install nor audit.
 
 ### Deps
 
 With the keys in this object you can control which type of dependencies should be updated.
 By default, only dev and regular/prod dependencies are updated, but peer and optional are also supported.
+This specifically changes which should be updated, you can change which are installed with `install` as per above.
 
 ### MinAge
 
