@@ -1,7 +1,7 @@
 nus
 ===
 
-Node/npm Update Script - A script to update all node/npm packages in a project.
+Node Update Script - A script to update all node packages in a project.
 
 ## Features
 
@@ -13,6 +13,7 @@ Node/npm Update Script - A script to update all node/npm packages in a project.
 - Custom options for cli: force, ignore-scripts, legacy-peer-deps and more
 - Built for npm first, there's also support for pnpm and bun, either global or via npx
 - Exact versions in package.json to avoid confusion and surprises
+- Optionally ask before applying updates and choose a custom version from a list
 - Clean CLI output: name, old version, new version, update policy, latest, see below
 
 ## Usage
@@ -37,6 +38,17 @@ then change the versions in this file, delete various lock files and `node_modul
 finally install the packages from scratch based on the updated `package.json` file.
 The overrides are the main way to change package versions using nus if needed,
 so see below for all information about configuring it using the config file.
+
+### Ask mode
+
+With the interactive ask mode you can have nus ask which version of a package to install.
+A version selector will be shown to select the version by typing and/or arrow keys.
+Enter selects the version, while Ctrl-C aborts updating entirely without changes.
+By default this is off, but you can turn it on either via the config below,
+or via the CLI with `--ask` or `--ask=<val>`, where `<val>` chooses which packages to ask.
+Without a value, the value will be set to "all", which will ask all packages.
+For example, using `--ask=changed` you will only be asked for packages actually updating.
+For all possible CLI arguments and different ask values, please see `--help` or below.
 
 ## Contribute
 
@@ -67,12 +79,13 @@ In short, only the lines that do not start with merely spaces are of interest (b
 
 There is an `nus.config.js` that you can store inside the root of your repo.
 This file can hold all nus config and even overrides for versions to use.
-A basic config (using all default settings) can look like this:
+A full config file (using all default settings) can look like this:
 
 `nus.config.js`
 
 ```js
 export default {
+    "ask": "none",
     "audit": true,
     "cli": {
         "force": false,
@@ -96,6 +109,8 @@ export default {
     "tool": "npm
 }
 ```
+
+Of course you only have to set the values for things that you actually want to change.
 
 ### Tool & CLI
 
@@ -134,6 +149,19 @@ It is recommended to keep the value of these options in sync, both are defined i
 In case all more recent versions of a package are too new for the minAge,
 an error is shown and the current version will remain in place without change.
 If there is an in-between version that is newer but still old enough, it will be updated to.
+
+### Ask
+
+This option enables the interactive ask mode for some or all packages.
+A version selector will be shown for each packages that this value enables it for.
+By default none, but you can enable it for the following group of packages:
+- "all" will show the selector for each and every package, including already up to date ones
+- "blocked" for packages that can't be updated at all due to overrides or minAge
+- "semi" for packages that can be updated but not to latest because of that
+- "latest" for packages that will be updated to latest but were not before
+You can choose to mix these into broader selectors via these:
+- "nonlatest" for both blocked and semi packages
+- "changed" for both semi and to be updated to latest packages
 
 ### Overrides
 

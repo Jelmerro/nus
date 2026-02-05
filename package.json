@@ -1,7 +1,7 @@
 {
     "name": "nus",
     "version": "0.1.0",
-    "description": "A script to update all node/npm packages in a project",
+    "description": "A script to update all node packages in a project",
     "keywords": [
         "Nodejs",
         "Npm",

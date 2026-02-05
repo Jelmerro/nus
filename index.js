@@ -5,8 +5,16 @@ import {existsSync, readFileSync, rmSync, writeFileSync} from "node:fs"
 import {join} from "node:path"
 import lt from "semver/functions/lt.js"
 import maxSatisfying from "semver/ranges/max-satisfying.js"
+import ask from "./select.js"
+
+/**
+ * @typedef {"all"|"latest"|"nonlatest"|"semi"|"changed"|"blocked"|"none"}
+ * AskLevel
+ */
 
 const config = {
+    /** @type {AskLevel} */
+    "ask": "none",
     /** @type {boolean|"prod"} */
     "audit": true,
     "cli": {
@@ -34,6 +42,14 @@ const config = {
     /** @type {"npm"|"npx pnpm"|"pnpm"|"npx bun"|"bun"} */
     "tool": "npm"
 }
+const askLevels = ["all", "latest", "nonlatest", "semi", "changed", "blocked"]
+
+/**
+ * Check if a string is a valid ask level or not.
+ * @param {string} level
+ * @returns {level is AskLevel}
+ */
+const isValidAskLevel = level => askLevels.includes(level)
 
 /**
  * Find the version of a package by direct version matching or semver range.
@@ -104,35 +120,40 @@ const fetchVersionInfo = ({alias, name}) => {
 }
 
 /**
- * Find the wanted version for a given package based on desired version string.
- * @param {{
- *   alias?: string|null,
- *   desired: string,
- *   name: string,
- *   paddedName: string,
- *   version: string,
- * }} opts
+ * Convert the release times to a list of versions and allowed versions.
+ * @param {{[version: string]: string|null}} releaseTimes
  */
-const findWantedVersion = ({alias, desired, name, paddedName, version}) => {
-    const info = fetchVersionInfo({"alias": alias ?? null, name})
-    if (!info?.["dist-tags"] || !info?.time) {
-        console.info(`X ${paddedName}${version} @${desired}`)
-        console.warn(`X Failed, ${config.tool} request error`)
-        return null
-    }
-    const allVersions = Object.keys(info.time)
+const versionInfoToAllowedVersions = releaseTimes => {
+    const allVersions = Object.keys(releaseTimes)
         .filter(v => v !== "modified" && v !== "created")
     const minAge = Date.now() - config.minAge * 1000 * 60
     const allowedVersions = allVersions.filter(v => {
-        const releaseTime = info.time[v]
+        const releaseTime = releaseTimes[v]
         if (!releaseTime) {
             return false
         }
         return new Date(releaseTime).getTime() <= minAge
     })
+    return {allowedVersions, allVersions}
+}
+
+/**
+ * Find the wanted version for a given package based on desired version string.
+ * @param {{
+ *   allowedVersions: string[],
+ *   allVersions: string[],
+ *   desired: string,
+ *   paddedName: string,
+ *   tags: {[tag: string]: string|null},
+ *   version: string
+ * }} opts
+ */
+const findWantedVersion = ({
+    allowedVersions, allVersions, desired, paddedName, tags, version
+}) => {
     let desiredRange = desired
-    if (info["dist-tags"][desired]) {
-        desiredRange = `<=${info["dist-tags"][desired]}`
+    if (tags[desired]) {
+        desiredRange = `<=${tags[desired]}`
     }
     const wanted = findByRange(allowedVersions, desiredRange)
     const newest = findByRange(allVersions, desiredRange)
@@ -146,18 +167,36 @@ const findWantedVersion = ({alias, desired, name, paddedName, version}) => {
         console.warn(`X Failed, no ${desired} version found`)
         return null
     }
+    return {newest, wanted}
+}
+
+/**
+ * Log the result of wanted, newest, latest and desired versions to the screen.
+ * @param {{
+ *   alias: string|null,
+ *   desired: string,
+ *   latest: string,
+ *   newest: string|null,
+ *   paddedName: string,
+ *   version: string,
+ *   wanted: string,
+ * }} opts
+ */
+const logResultToUser = ({
+    alias, desired, latest, newest, paddedName, version, wanted
+}) => {
     let status = "  "
     let policy = ""
     let tooNew = ""
-    if (wanted !== newest) {
+    if (newest && wanted !== newest) {
         status = "! "
         tooNew = ` !${newest}`
     }
     if (desired !== "latest") {
         status = "~ "
         policy = ` @${desired}`
-        if (desired !== info["dist-tags"].latest) {
-            policy += ` ~${info["dist-tags"].latest}`
+        if (desired !== latest) {
+            policy += ` ~${latest}`
         }
     }
     let update = ""
@@ -271,6 +310,12 @@ if (existsSync(nusConfigFile)) {
                 console.warn(`X Ignoring '${arg}', must be boolean or "prod"`)
             }
         }
+        if (isValidAskLevel(customConfig.ask)) {
+            config.ask = customConfig.ask
+        } else if (customConfig.ask !== undefined) {
+            console.warn(`X Ignoring 'ask', must be one of: ${
+                askLevels.join(", ")}`)
+        }
         if (typeof customConfig.overrides === "object") {
             for (const [key, value] of Object.entries(customConfig.overrides)) {
                 if (typeof value !== "string") {
@@ -284,6 +329,58 @@ if (existsSync(nusConfigFile)) {
             console.warn("X Ignoring 'overrides', "
                 + "must be a flat string-string object")
         }
+    }
+}
+
+/**
+ * Print command line interface usage and exit with code.
+ * @param {number} code
+ */
+const printUsage = (code = 1) => {
+    console.info(`nus: Node update script
+
+Usage: nus [options]
+
+Options:
+ --help              Print this help and exit.
+
+ --ask       Start in interactive ask mode of type "all"
+             A version selector will be shown for each and every package.
+
+ --ask=<val> Start in interactive ask mode of type <val>, where <val> can be:
+             ${askLevels.join(", ")}
+             A version selector will be shown for each to be updated package,
+             which matches the type of <val> selected for updating.
+             Only "all" will show the selector for latest up to date packages.
+             Most values select between the three main states of updating:
+             - blocked: can't be updated at all due to overrides or minAge
+             - semi: Package can be updated but not to latest because of that
+             - latest: Package will be updated to latest but were not before
+             You can choose to mix these into broader selectors via these:
+             - nonlatest: blocked + semi
+             - changed: semi + latest
+
+nus is created by Jelmer van Arnhem and contributors.
+Website: https://github.com/Jelmerro/nus License: MIT
+This is free software; you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+See the LICENSE file or the website for details.`)
+    process.exit(code)
+}
+
+for (const a of process.argv.slice(2)) {
+    const arg = a.trim()
+    if (arg === "--help") {
+        printUsage(0)
+    } else if (arg === "--ask") {
+        config.ask = "all"
+    } else if (arg.startsWith("--ask=")) {
+        const argVal = arg.split("=").slice(1).join("=")
+        if (isValidAskLevel(argVal)) {
+            config.ask = argVal
+        }
+    } else {
+        printUsage()
     }
 }
 /**
@@ -314,7 +411,7 @@ for (const depType of depTypes) {
     for (const [name, version] of Object.entries(pack[depType])) {
         const paddedName = `${name.padEnd(longestName, " ")} `
         const {alias, verType} = findVersionType(name, version)
-        const desired = config.overrides[name] ?? "latest"
+        let desired = config.overrides[name] ?? "latest"
         if (verType === "file" || verType === "git" || verType === "url") {
             const hash = desired.replace(/^#+/g, "")
             if (hash === "latest" || verType !== "git") {
@@ -324,12 +421,76 @@ for (const depType of depTypes) {
                 pack[depType][name] = `${version.split("#")[0]}#${hash}`
             }
         } else {
-            const wanted = findWantedVersion({
-                alias, desired, name, paddedName, version
-            })
-            if (wanted) {
-                pack[depType][name] = wanted
+            const info = fetchVersionInfo({"alias": alias ?? null, name})
+            if (!info?.["dist-tags"]?.latest || !info?.time) {
+                console.info(`X ${paddedName}${version} @${desired}`)
+                console.warn(`X Failed, ${config.tool} request error`)
+                continue
             }
+            const {
+                allowedVersions, allVersions
+            } = versionInfoToAllowedVersions(info.time)
+            const wantedInfo = findWantedVersion({
+                allowedVersions,
+                allVersions,
+                desired,
+                paddedName,
+                "tags": info["dist-tags"],
+                version
+            })
+            if (!wantedInfo) {
+                continue
+            }
+            const versionStatus = {
+                "blocked": version === wantedInfo.wanted
+                    && wantedInfo.wanted !== info["dist-tags"].latest,
+                "latest": version !== wantedInfo.wanted
+                    && wantedInfo.wanted === info["dist-tags"].latest,
+                "semi": version !== wantedInfo.wanted
+                    && wantedInfo.wanted !== info["dist-tags"].latest
+            }
+            const shouldAskVersion = config.ask === "all" || [
+                config.ask === "blocked" && versionStatus.blocked,
+                config.ask === "semi" && versionStatus.semi,
+                config.ask === "latest" && versionStatus.latest,
+                config.ask === "nonlatest"
+                    && (versionStatus.blocked || versionStatus.semi),
+                config.ask === "changed"
+                    && (versionStatus.latest || versionStatus.semi)
+            ].some(Boolean)
+            if (shouldAskVersion) {
+                logResultToUser({
+                    alias,
+                    desired,
+                    "latest": info["dist-tags"].latest,
+                    "newest": wantedInfo.newest,
+                    paddedName,
+                    version,
+                    "wanted": wantedInfo.wanted
+                })
+                const selected = await ask(
+                    `Select ${name} version`, allVersions, wantedInfo.wanted)
+                wantedInfo.wanted = selected
+                if (selected === info["dist-tags"].latest) {
+                    desired = "latest"
+                } else {
+                    desired = selected
+                }
+                wantedInfo.newest = null
+                process.stdout.moveCursor(0, -1)
+                process.stdout.clearLine(0)
+                process.stdout.cursorTo(0)
+            }
+            logResultToUser({
+                alias,
+                desired,
+                "latest": info["dist-tags"].latest,
+                "newest": wantedInfo.newest,
+                paddedName,
+                version,
+                "wanted": wantedInfo.wanted
+            })
+            pack[depType][name] = wantedInfo.wanted
         }
     }
 }
