@@ -29,6 +29,7 @@
         "update": "npx -y jelmerro/nus"
     },
     "dependencies": {
+        "fast-npm-meta": "1.2.0",
         "semver": "7.7.4"
     },
     "devDependencies": {

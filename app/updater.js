@@ -1,3 +1,4 @@
+import {getVersionsBatch} from "fast-npm-meta"
 import {execSync} from "node:child_process"
 import {readFileSync, writeFileSync} from "node:fs"
 import {join} from "node:path"
@@ -171,9 +172,14 @@ const logResultToUser = ({
 
 /**
  * Update a package to the latest version based on the configured policy.
- * @param {{name: string, paddedName: string, version: string}} options
+ * @param {{
+ *   versionInfo: import("fast-npm-meta").PackageVersionsInfo|undefined,
+ *   name: string,
+ *   paddedName: string,
+ *   version: string
+ * }} options
  */
-const updatePackage = async({name, paddedName, version}) => {
+const updatePackage = async({name, paddedName, version, versionInfo}) => {
     const {alias, verType} = findVersionType(name, version)
     let desired = config.overrides[name] ?? "latest"
     if (verType === "file" || verType === "git" || verType === "url") {
@@ -186,7 +192,7 @@ const updatePackage = async({name, paddedName, version}) => {
         }
         return version
     }
-    const info = fetchVersionInfo({"alias": alias ?? null, name})
+    const info = versionInfo ?? fetchVersionInfo({"alias": alias ?? null, name})
     if (!info?.distTags?.latest || !info?.time) {
         console.info(`X ${paddedName}${version} @${desired}`)
         console.warn(`X Failed, ${config.tool} request error`)
@@ -307,12 +313,25 @@ const updater = async() => {
     const depTypes = Object.keys(config.deps).filter(d => config.deps[d])
         .map(d => depNameTranslateObj[d])
     let longestName = 20
+    /** @type {string[]} */
+    const packageList = []
     for (const depType of depTypes) {
         if (pack[depType]) {
             for (const name of Object.keys(pack[depType])) {
+                const {verType} = findVersionType(name, pack[depType][name])
+                if (["alias", "semver"].includes(verType)) {
+                    packageList.push(name)
+                }
                 longestName = Math.max(longestName, name.length)
             }
         }
+    }
+    /** @type {import("fast-npm-meta").PackageVersionsInfo[]} */
+    let bulkFetchedInfo = []
+    try {
+        bulkFetchedInfo = await getVersionsBatch(packageList, {"retry": 1})
+    } catch {
+        console.warn(`X Failed, fast-npm-meta request error`)
     }
     for (const depType of depTypes) {
         if (!pack[depType]) {
@@ -321,8 +340,9 @@ const updater = async() => {
         console.info(`= Updating ${depType} =`)
         for (const [name, version] of Object.entries(pack[depType])) {
             const paddedName = `${name.padEnd(longestName, " ")} `
+            const versionInfo = bulkFetchedInfo.find(i => i.name === name)
             pack[depType][name] = await updatePackage(
-                {name, paddedName, version})
+                {name, paddedName, version, versionInfo})
         }
     }
     writeFileSync(packageJsonFile, `${JSON.stringify(pack, null, indent)}\n`)

@@ -7,6 +7,7 @@ Node Update Script - A script to update all node packages in a project.
 
 - Always update to the latest including major (unless overridden using [semver ranges](https://github.com/npm/node-semver))
 - Always do a clean install to update nested dependencies too
+- Faster than most, as it will try to do it with a single web request via [fast-npm-meta](https://github.com/antfu/fast-npm-meta)
 - Specify custom versions to use by tag, range or version (default is latest)
 - Single command to update, install, audit and finally dedupe
 - Optionally set a minAge to prevent very recent releases from being used
