@@ -17,9 +17,9 @@
     "license": "MIT",
     "author": "Jelmer van Arnhem",
     "type": "module",
-    "exports": "./index.js",
+    "exports": "./app/index.js",
     "bin": {
-        "nus": "./index.js"
+        "nus": "./app/index.js"
     },
     "scripts": {
         "eslint": "eslint",
