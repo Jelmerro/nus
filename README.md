@@ -9,9 +9,7 @@ Node Update Script - A script to update all node packages in a project.
 - Always do a clean install to update nested dependencies too
 - Faster than most, as it will try to do it with a single web request via [fast-npm-meta](https://github.com/antfu/fast-npm-meta)
 - Specify custom versions to use by tag, range or version (default is latest)
-- Single command to update, install, audit and finally dedupe
 - Optionally set a minAge to prevent very recent releases from being used
-- Custom options for cli: force, ignore-scripts, legacy-peer-deps and more
 - Built for npm first, there's also support for pnpm and bun, either global or via npx
 - Exact versions in package.json to avoid confusion and surprises
 - Optionally ask before applying updates and choose a custom version from a list
@@ -87,7 +85,6 @@ A full config file (using all default settings) can look like this:
 ```js
 export default {
     "ask": "none",
-    "audit": true,
     "cli": {
         "force": false,
         "foregroundScripts": true,
@@ -113,28 +110,29 @@ export default {
 
 Of course you only have to set the values for things that you actually want to change.
 
-### Tool & CLI
+### CLI
 
-The optional cli subkey is used for giving the respective options to npm, pnpm or bun commands.
-For example, `legacy` will set `--legacy-peer-deps` for npm and `--strict-peer-dependencies=false` for pnpm.
+The optional cli subkey is used for giving the respective options to npm, pnpm or bun install commands.
+For most CLI flags, you can use an `.npmrc` file, which is also read by pnpm and bun.
+These might be updated or removed entirely in the future, as they should rarely differ for updating.
+Given a project directory: to use legacy peer deps, change the loglevel or use force:
+`npm config set -L project legacy-peer-deps=true loglevel=silly force=true`
 Npm's fund messages are by default hidden, while install scripts that run are made visible.
+
+### Tool
+
 The current supported values for `tool` are: "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
 Since lock files are deleted during updates, nus is also convenient for switching between tools.
-For most CLI flags, you can use an `.npmrc`, which is also read by pnpm and bun,
-unless you only want to set it for running the updates and not by default.
 
-### Audit & Dedupe & Install
+### Dedupe & Install
 
 The npm/pnpm subcommand that is first run is `install`,
-but by default `audit fix` and `dedupe` are also run to keep the output secure and small.
-You can control/disable this with the toplevel `audit`, `dedupe` and `install` options.
-If `install` is disabled, `audit` and `dedupe` are ignored and no installation is performed.
+but by default `dedupe` is also run to keep the output clean and small.
+You can control/disable this with the toplevel `dedupe` and `install` options.
+If `install` is disabled, `dedupe` is ignored and no installation is performed.
 Old `node_modules` and lock files are always completely cleared regardless of these options.
-For `audit` and `install` you can also change it to `"prod"` to only install or audit those.
-Unlike npm's default behavior, if you only install production dependencies,
-nus will not magically install them when running the audit, but only audit `"prod"`.
-Hence setting `install` to `"prod"` will prevent you from auditing dev dependencies,
-similar to how setting `install` to `false` will abort early and not run install nor audit.
+For `install` you can also change it to `"prod"` to only install those,
+but other type of dependencies will still be updated if enabled via `deps` as per below.
 
 ### Deps
 

@@ -9,8 +9,6 @@ import {join} from "node:path"
 const config = {
     /** @type {AskLevel} */
     "ask": "none",
-    /** @type {boolean|"prod"} */
-    "audit": true,
     "cli": {
         "force": false,
         "foregroundScripts": true,
@@ -101,20 +99,17 @@ if (existsSync(nusConfigFile)) {
                 console.warn(`X Ignoring 'cli.${cliArg}', must be boolean`)
             }
         }
-        /** @type {("audit"|"dedupe"|"install")[]} */
-        const boolOpts = ["audit", "dedupe", "install"]
-        for (const arg of boolOpts) {
-            if (typeof customConfig[arg] === "boolean") {
-                config[arg] = customConfig[arg]
-            } else if (arg === "dedupe") {
-                if (customConfig[arg] !== undefined) {
-                    console.warn(`X Ignoring '${arg}', must be boolean`)
-                }
-            } else if (customConfig[arg] === "prod") {
-                config[arg] = "prod"
-            } else if (customConfig[arg] !== undefined) {
-                console.warn(`X Ignoring '${arg}', must be boolean or "prod"`)
-            }
+        if (customConfig.install === "prod") {
+            config.install = "prod"
+        } else if (typeof customConfig.install === "boolean") {
+            config.install = customConfig.install
+        } else if (customConfig.install !== undefined) {
+            console.warn(`X Ignoring 'install', must be boolean or "prod"`)
+        }
+        if (typeof customConfig.dedupe === "boolean") {
+            config.dedupe = customConfig.dedupe
+        } else if (customConfig.dedupe !== undefined) {
+            console.warn(`X Ignoring 'dedupe', must be boolean`)
         }
         if (isValidAskLevel(customConfig.ask)) {
             config.ask = customConfig.ask
