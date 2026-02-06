@@ -132,7 +132,6 @@ const findWantedVersion = ({
 /**
  * Log the result of wanted, newest, latest and desired versions to the screen.
  * @param {{
- *   alias: string|null,
  *   desired: string,
  *   latest: string,
  *   newest: string|null,
@@ -142,7 +141,7 @@ const findWantedVersion = ({
  * }} opts
  */
 const logResultToUser = ({
-    alias, desired, latest, newest, paddedName, version, wanted
+    desired, latest, newest, paddedName, version, wanted
 }) => {
     let status = "  "
     let policy = ""
@@ -164,10 +163,6 @@ const logResultToUser = ({
         update = ` > ${wanted}`
     }
     console.info(`${status}${paddedName}${version}${update}${policy}${tooNew}`)
-    if (alias) {
-        return `npm:${alias}@${wanted}`
-    }
-    return wanted
 }
 
 /**
@@ -231,7 +226,6 @@ const updatePackage = async({name, paddedName, version, versionInfo}) => {
     ].some(Boolean)
     if (shouldAskVersion) {
         logResultToUser({
-            alias,
             desired,
             "latest": info.distTags.latest,
             "newest": wantedInfo.newest,
@@ -253,7 +247,6 @@ const updatePackage = async({name, paddedName, version, versionInfo}) => {
         process.stdout.cursorTo(0)
     }
     logResultToUser({
-        alias,
         desired,
         "latest": info.distTags.latest,
         "newest": wantedInfo.newest,
@@ -261,6 +254,9 @@ const updatePackage = async({name, paddedName, version, versionInfo}) => {
         version,
         "wanted": wantedInfo.wanted
     })
+    if (alias) {
+        return `npm:${alias}@${wantedInfo.wanted}`
+    }
     return wantedInfo.wanted
 }
 
@@ -319,7 +315,7 @@ const updater = async() => {
         if (pack[depType]) {
             for (const name of Object.keys(pack[depType])) {
                 const {verType} = findVersionType(name, pack[depType][name])
-                if (["alias", "semver"].includes(verType)) {
+                if (verType === "semver") {
                     packageList.push(name)
                 }
                 longestName = Math.max(longestName, name.length)
