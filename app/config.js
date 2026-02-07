@@ -1,5 +1,6 @@
 import {existsSync} from "node:fs"
 import {join} from "node:path"
+import paths from "./paths.js"
 
 /**
  * @typedef {"all"|"latest"|"nonlatest"|"semi"|"changed"|"blocked"|"none"}
@@ -21,8 +22,8 @@ const config = {
     "minAge": 0,
     /** @type {{[name: string]: string}} */
     "overrides": {},
-    /** @type {"npm"|"npx pnpm"|"pnpm"|"npx bun"|"bun"} */
-    "tool": "npm"
+    /** @type {"auto"|"npm"|"npx pnpm"|"pnpm"|"npx bun"|"bun"} */
+    "tool": "auto"
 }
 const askLevels = ["all", "latest", "nonlatest", "semi", "changed", "blocked"]
 
@@ -44,7 +45,7 @@ if (existsSync(nusConfigFile)) {
     }
     if (customConfig) {
         if (customConfig.tool !== undefined) {
-            const tools = ["npm", "npx pnpm", "pnpm", "npx bun", "bun"]
+            const tools = ["auto", "npm", "npx pnpm", "pnpm", "npx bun", "bun"]
             if (tools.includes(customConfig.tool)) {
                 config.tool = customConfig.tool
             } else {
@@ -98,6 +99,44 @@ if (existsSync(nusConfigFile)) {
                 + "must be a flat string-string object")
         }
     }
+}
+
+/**
+ * Check if a command is in the path by trying to find it in the PATH env var.
+ * @param {string} command
+ */
+const isInPath = command => {
+    for (const folder of process.env.PATH?.split(":") ?? []) {
+        if (existsSync(join(folder, command))) {
+            return true
+        }
+    }
+    return false
+}
+
+/** Set the tool config based on lock files, via npx if not found in path. */
+const autoDetectTool = () => {
+    if (existsSync(paths.lock.npm)) {
+        config.tool = "npm"
+    } else if (existsSync(paths.lock.pnpm)) {
+        if (isInPath("pnpm")) {
+            config.tool = "pnpm"
+        } else {
+            config.tool = "npx pnpm"
+        }
+    } else if (existsSync(paths.lock.bun)) {
+        if (isInPath("bun")) {
+            config.tool = "bun"
+        } else {
+            config.tool = "npx bun"
+        }
+    } else {
+        config.tool = "npm"
+    }
+}
+
+if (config.tool === "auto") {
+    autoDetectTool()
 }
 
 /**

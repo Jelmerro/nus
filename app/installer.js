@@ -1,15 +1,14 @@
 import {execSync} from "node:child_process"
 import {rmSync} from "node:fs"
-import {join} from "node:path"
 import config from "./config.js"
+import paths from "./paths.js"
 
 /** Clear all lock files and node_modules, then re-install clean with args. */
 const install = () => {
-    rmSync(join(process.cwd(), "package-lock.json"), {"force": true})
-    rmSync(join(process.cwd(), "pnpm-lock.yaml"), {"force": true})
-    rmSync(join(process.cwd(), "bun.lock"), {"force": true})
-    rmSync(join(process.cwd(), "node_modules"),
-        {"force": true, "recursive": true})
+    for (const lock of Object.values(paths.lock)) {
+        rmSync(lock, {"force": true})
+    }
+    rmSync(paths.node_modules, {"force": true, "recursive": true})
     if (config.install === "none") {
         process.exit(0)
     }

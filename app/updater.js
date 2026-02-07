@@ -1,13 +1,11 @@
 import {getVersionsBatch} from "fast-npm-meta"
 import {execSync} from "node:child_process"
 import {readFileSync, writeFileSync} from "node:fs"
-import {join} from "node:path"
 import lt from "semver/functions/lt.js"
 import maxSatisfying from "semver/ranges/max-satisfying.js"
 import config from "./config.js"
+import paths from "./paths.js"
 import ask from "./select.js"
-
-const packageJsonFile = join(process.cwd(), "package.json")
 
 /**
  * Find the version of a package by direct version matching or semver range.
@@ -275,7 +273,7 @@ const readPackageJson = () => {
     /** @type {number|"\t"} */
     let indent = 2
     try {
-        const packStr = readFileSync(packageJsonFile,
+        const packStr = readFileSync(paths.package,
             {"encoding": "utf8"}).toString()
         const line = packStr.split("\n").find(
             l => l.startsWith(" ") || l.startsWith("\t")) ?? ""
@@ -341,7 +339,7 @@ const updater = async() => {
                 {name, paddedName, version, versionInfo})
         }
     }
-    writeFileSync(packageJsonFile, `${JSON.stringify(pack, null, indent)}\n`)
+    writeFileSync(paths.package, `${JSON.stringify(pack, null, indent)}\n`)
 }
 
 export default updater

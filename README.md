@@ -95,7 +95,7 @@ export default {
     "install": "all",
     "minAge": 0,
     "overrides": {},
-    "tool": "npm
+    "tool": "auto"
 }
 ```
 
@@ -103,8 +103,12 @@ Of course you only have to set the values for things that you actually want to c
 
 ### Tool
 
-The current supported values for `tool` are: "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
-Since lock files are deleted during updates, nus is also convenient for switching between tools.
+The current supported values for `tool` are: "auto", "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
+By default, it will use npm if there is a package-lock.json or if no other lock files are present.
+Otherwise, it will try to find "pnpm" and "bun" lock files and switch the tool based on that.
+By checking for the executable in the PATH, it will use either the executable or run it via "npx".
+Since all lock files are deleted during updates, nus is also convenient for switching between tools,
+by briefly setting it to the new package manager you would like to switch to.
 
 ### Dedupe
 
