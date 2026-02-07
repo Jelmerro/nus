@@ -1,4 +1,4 @@
-import {existsSync} from "node:fs"
+import {existsSync, readFileSync} from "node:fs"
 import {join} from "node:path"
 import paths from "./paths.js"
 
@@ -116,15 +116,42 @@ const isInPath = command => {
 
 /** Set the tool config based on lock files, via npx if not found in path. */
 const autoDetectTool = () => {
+    let engines = null
+    /** @type {"npm"|"pnpm"|"bun"|null} */
+    let packageManager = null
+    try {
+        const packStr = readFileSync(paths.package,
+            {"encoding": "utf8"}).toString()
+        /**
+         * @type {{
+         *   engines?: {
+         *     pnpm?: string,
+         *     bun?: string,
+         *   },
+         *   devEngines?: {
+         *     packageManager?: {
+         *       name?: "pnpm"|"bun"
+         *     }
+         *   }
+         * }|null}
+         */
+        const parsed = JSON.parse(packStr)
+        engines = parsed?.engines
+        packageManager = parsed?.devEngines?.packageManager?.name ?? null
+    } catch {
+        // Ignore for now, will error properly later if missing entirely.
+    }
     if (existsSync(paths.lock.npm)) {
         config.tool = "npm"
-    } else if (existsSync(paths.lock.pnpm)) {
+    } else if (existsSync(paths.lock.pnpm)
+        || !!engines?.pnpm || packageManager?.startsWith("pnpm")) {
         if (isInPath("pnpm")) {
             config.tool = "pnpm"
         } else {
             config.tool = "npx pnpm"
         }
-    } else if (existsSync(paths.lock.bun)) {
+    } else if (existsSync(paths.lock.bun)
+        || !!engines?.bun || packageManager?.startsWith("bun")) {
         if (isInPath("bun")) {
             config.tool = "bun"
         } else {

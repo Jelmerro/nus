@@ -76,7 +76,7 @@ In short, only the lines that do not start with merely spaces are of interest (b
 
 ## Config
 
-There is an `nus.config.js` that you can store inside the root of your repo.
+There is a `nus.config.js` that you can store inside the root of your repo.
 This file can hold all nus config and even overrides for versions to use.
 A full config file (using all default settings) can look like this:
 
@@ -104,11 +104,12 @@ Of course you only have to set the values for things that you actually want to c
 ### Tool
 
 The current supported values for `tool` are: "auto", "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
-By default, it will use npm if there is a package-lock.json or if no other lock files are present.
-Otherwise, it will try to find "pnpm" and "bun" lock files and switch the tool based on that.
+By default, it will use npm if there is a package-lock.json or if no other package managers are detected.
+It will try to find "pnpm" and "bun" lock files and switch the tool based on that,
+or via the presence of either "pnpm" or "bun" in "engines" or "devEngines.packageManager.name" in "package.json".
 By checking for the executable in the PATH, it will use either the executable or run it via "npx".
 Since all lock files are deleted during updates, nus is also convenient for switching between tools,
-by briefly setting it to the new package manager you would like to switch to.
+and as such the main reason to (briefly) set this manually at all is to switch to another tool.
 
 ### Dedupe
 
