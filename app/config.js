@@ -9,16 +9,6 @@ import {join} from "node:path"
 const config = {
     /** @type {AskLevel} */
     "ask": "none",
-    "cli": {
-        "force": false,
-        "foregroundScripts": true,
-        "fundHide": true,
-        "global": false,
-        "ignoreScripts": false,
-        "legacy": false,
-        /** @type {"silent"|"error"|"warn"|"notice"|"info"|"verbose"|"silly"} */
-        "loglevel": "notice"
-    },
     "dedupe": true,
     "deps": {
         "dev": true,
@@ -26,8 +16,8 @@ const config = {
         "peer": false,
         "prod": true
     },
-    /** @type {boolean|"prod"} */
-    "install": true,
+    /** @type {"all"|"deps"|"prod"|"none"} */
+    "install": "all",
     "minAge": 0,
     /** @type {{[name: string]: string}} */
     "overrides": {},
@@ -76,40 +66,17 @@ if (existsSync(nusConfigFile)) {
                 console.warn("X Ignoring 'minAge', must be number")
             }
         }
-        for (const cliArg of Object.keys(config.cli)) {
-            if (cliArg === "loglevel") {
-                const loglevels = [
-                    "silent",
-                    "error",
-                    "warn",
-                    "notice",
-                    "info",
-                    "verbose",
-                    "silly"
-                ]
-                if (loglevels.includes(customConfig.cli?.[cliArg])) {
-                    config.cli[cliArg] = customConfig.cli[cliArg]
-                } else if (customConfig.cli?.[cliArg] !== undefined) {
-                    console.warn(`X Ignoring 'cli.${cliArg}', must be one of:`
-                        + ` ${loglevels.join(", ")}`)
-                }
-            } else if (typeof customConfig.cli?.[cliArg] === "boolean") {
-                config.cli[cliArg] = customConfig.cli[cliArg]
-            } else if (customConfig.cli?.[cliArg] !== undefined) {
-                console.warn(`X Ignoring 'cli.${cliArg}', must be boolean`)
-            }
-        }
-        if (customConfig.install === "prod") {
-            config.install = "prod"
-        } else if (typeof customConfig.install === "boolean") {
+        const installTypes = ["all", "deps", "prod", "none"]
+        if (installTypes.includes(customConfig.install)) {
             config.install = customConfig.install
         } else if (customConfig.install !== undefined) {
-            console.warn(`X Ignoring 'install', must be boolean or "prod"`)
+            console.warn(`X Ignoring 'install', must be one of: ${
+                installTypes.join(", ")}`)
         }
         if (typeof customConfig.dedupe === "boolean") {
             config.dedupe = customConfig.dedupe
         } else if (customConfig.dedupe !== undefined) {
-            console.warn(`X Ignoring 'dedupe', must be boolean`)
+            console.warn("X Ignoring 'dedupe', must be boolean")
         }
         if (isValidAskLevel(customConfig.ask)) {
             config.ask = customConfig.ask

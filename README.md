@@ -85,15 +85,6 @@ A full config file (using all default settings) can look like this:
 ```js
 export default {
     "ask": "none",
-    "cli": {
-        "force": false,
-        "foregroundScripts": true,
-        "fundHide": true,
-        "global": false,
-        "ignoreScripts": false,
-        "legacy": false,
-        "loglevel": "notice"
-    },
     "dedupe": true,
     "deps": {
         "dev": true,
@@ -101,7 +92,7 @@ export default {
         "peer": false,
         "prod": true
     },
-    "install": true,
+    "install": "all",
     "minAge": 0,
     "overrides": {},
     "tool": "npm
@@ -110,29 +101,28 @@ export default {
 
 Of course you only have to set the values for things that you actually want to change.
 
-### CLI
-
-The optional cli subkey is used for giving the respective options to npm, pnpm or bun install commands.
-For most CLI flags, you can use an `.npmrc` file, which is also read by pnpm and bun.
-These might be updated or removed entirely in the future, as they should rarely differ for updating.
-Given a project directory: to use legacy peer deps, change the loglevel or use force:
-`npm config set -L project legacy-peer-deps=true loglevel=silly force=true`
-Npm's fund messages are by default hidden, while install scripts that run are made visible.
-
 ### Tool
 
 The current supported values for `tool` are: "npm", "npx pnpm", "pnpm", "npx bun" or "bun".
 Since lock files are deleted during updates, nus is also convenient for switching between tools.
 
-### Dedupe & Install
+### Dedupe
 
-The npm/pnpm subcommand that is first run is `install`,
-but by default `dedupe` is also run to keep the output clean and small.
-You can control/disable this with the toplevel `dedupe` and `install` options.
-If `install` is disabled, `dedupe` is ignored and no installation is performed.
+By default, `dedupe` is also run to keep the output clean and small.
+This requires two commands for pnpm, but for npm it is done with a single command,
+hence it should not have a negative effect on installation speed for npm.
+Since the resulting output is smaller, it is recommended to leave this enabled.
+
+### Install
+
+You can control/disable the method of installation using this option like so:
+- "all" will respect package manager's postinstall script settings and install all dependencies
+- "deps" will not run postinstall scripts, but still install prod and dev dependencies
+- "prod" will not run postinstall scripts and only install prod dependencies
+- "none" will not do any installation, not run postinstalls nor perform a `dedupe`
+It's of course much safer to disable postinstall completely,
+if you do, "all" and "deps" will be identical.
 Old `node_modules` and lock files are always completely cleared regardless of these options.
-For `install` you can also change it to `"prod"` to only install those,
-but other type of dependencies will still be updated if enabled via `deps` as per below.
 
 ### Deps
 
@@ -142,7 +132,7 @@ This specifically changes which should be updated, you can change which are inst
 
 ### MinAge
 
-This controls the minimal age that packages should have to be considered.
+This controls the minimal age that package releases should have to be considered.
 As such, this options works exactly like [pnpm's minimumReleaseAge option](https://pnpm.io/settings#minimumreleaseage).
 It is recommended to keep the value of these options in sync, both are defined in minutes.
 In case all more recent versions of a package are too new for the minAge,
